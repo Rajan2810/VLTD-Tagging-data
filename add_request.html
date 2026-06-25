@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Request</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-4">
+
+<h1 class="mb-4">Add Tagging Request</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Single Add -->
+<form method="post" action="/add" class="mb-4">
+    <div class="mb-3">
+        <label class="form-label">VIN:</label>
+        <input type="text" name="vin" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">State:</label>
+        <select name="state" class="form-select" required>
+            <option value="">--Select--</option>
+            <option>Delhi</option><option>Kerala</option><option>Maharashtra</option><option>Maharashtra Mahakhanij</option>
+            <option>Chhattisgarh</option><option>West Bengal</option><option>Uttarakhand</option><option>Himachal Pradesh</option>
+            <option>Goa</option><option>Bihar</option><option>Karnataka</option><option>Rajasthan</option> <option>Tamil Nadu</option>
+            <option>Madhya Pradesh</option><option>Uttar Pradesh</option><option>Chandigarh</option><option>Assam</option><option>Andhra Pradesh</option>
+        </select>
+        </select>
+    <div class="mb-3">
+        <label class="form-label">Dealer Code:</label>
+        <input type="text" name="dealer_code" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Add Request</button>
+</form>
+
+<!-- Bulk Upload -->
+<h2>Bulk Upload</h2>
+<p>Download sample format: <a href="/sample_format" class="btn btn-success btn-sm">Sample Excel</a></p>
+
+<form method="post" action="/bulk_upload" enctype="multipart/form-data">
+    <div class="mb-3">
+        <label class="form-label">Upload Excel/CSV:</label>
+        <input type="file" name="file" class="form-control" accept=".csv,.xlsx" required>
+    </div>
+    <button type="submit" class="btn btn-warning">Upload & Preview</button>
+</form>
+
+<br>
+<a href="/vahan" class="btn btn-secondary">➡ Vahan Status</a>
+<a href="/backend" class="btn btn-secondary">➡ Tagging Status</a>
+<a href="/download" class="btn btn-outline-primary">⬇ Download Excel</a>
+
+</body>
+</html>

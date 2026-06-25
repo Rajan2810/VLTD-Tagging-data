@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tagging Status</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+</head>
+<body class="container mt-4">
+
+<h1 class="mb-4">Backend / Tagging Status</h1>
+<a href="/" class="btn btn-secondary btn-sm mb-3">🏠 Home</a>
+
+{% if requests %}
+    <table id="taggingTable" class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>VIN</th>
+                <th>Dealer Code</th>
+                <th>State</th>
+                <th>Tagging Status</th>
+                <th>Remarks</th>
+                <th>Closed On</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for r in requests %}
+            <tr>
+                <td>{{ r.vin }}</td>
+                <td>{{ r.dealer_code }}</td>
+                <td>{{ r.state }}</td>
+                <td>
+                    <form method="post" class="d-flex">
+                        <input type="hidden" name="id" value="{{ r.id }}">
+                        <select name="tagging_status" class="form-select form-select-sm me-2">
+                            <option value="Pending" {% if r.tagging_status=="Pending" %}selected{% endif %}>Pending</option>
+                            <option value="Completed" {% if r.tagging_status=="Completed" %}selected{% endif %}>Completed</option>
+                        </select>
+                        {% if r.tagging_status == "Pending" %}
+                            <input type="text" name="remarks" class="form-control form-control-sm me-2" placeholder="Remarks" value="{{ r.remarks or '' }}">
+                        {% endif %}
+                        <button type="submit" class="btn btn-sm btn-primary">Update</button>
+                    </form>
+                </td>
+                <td>{{ r.remarks or '-' }}</td>
+                <td>{{ r.closure_date or '-' }}</td>
+                <td>
+                    {% if r.tagging_status == "Completed" %}
+                        <span class="text-success">Closed</span>
+                    {% else %}
+                        <span class="text-warning">Pending</span>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="alert alert-info">No requests forwarded to backend.</div>
+{% endif %}
+
+<div class="mt-4">
+    <a href="/vahan" class="btn btn-warning">➡ Vahan Status</a>
+    <a href="/download" class="btn btn-outline-primary">⬇ Download Excel</a>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script>
+    $(document).ready(function() {
+        $('#taggingTable').DataTable({
+            "pageLength": 10,
+            "lengthChange": false,
+            "stateSave": true
+        });
+    });
+</script>
+
+</body>
+</html>
+
