@@ -21,48 +21,32 @@ EXCEL_FILE="tagging_requests.xlsx"
 IST=pytz.timezone("Asia/Kolkata")
 
 # ================= DATABASE =================
+import pymysql
+
+
+# ================= DATABASE =================
+
 def get_connection():
 
     try:
 
-        return pymysql.connect(
+        conn = pymysql.connect(
             host="esimproddb.taisys.in",
             user="iconnect_user",
-            password="kG7TwbkkSGZd86mX",
+            password="YOUR_PASSWORD",
             database="taisys_connect",
-
             port=3306,
-
             connect_timeout=10,
-
             cursorclass=pymysql.cursors.DictCursor
         )
 
+        return conn
+
     except Exception as e:
 
-        print(
-            "DB Error:",
-            str(e)
-        )
+        print("DB Connection Error:", e)
 
         return None
-
-def save_data(data):
-
-    with open(DATA_FILE, "w") as f:
-
-        json.dump(
-            data,
-            f,
-            indent=4
-        )
-
-    pd.DataFrame(
-        data
-    ).to_excel(
-        EXCEL_FILE,
-        index=False
-    )
 
 
 # ================= SQL SEARCH =================
@@ -71,63 +55,77 @@ def search_vin(vin):
 
     conn = get_connection()
 
-    if conn is None:
+    if not conn:
         return None
 
-    cur = conn.cursor()
+    try:
 
-    sql = """
+        cur = conn.cursor()
 
-SELECT
+        sql = """
 
-v.vin,
+        SELECT
 
-d.esn AS unique_device_code,
+            v.vin,
 
-d.imei,
+            d.esn AS unique_device_code,
 
-e.primary_iccid AS iccid,
+            d.imei,
 
-DATE_FORMAT(
-d.created_on,
-'%m/%Y'
-) manuf_month,
+            e.primary_iccid AS iccid,
 
-ar.state,
+            DATE_FORMAT(
+                d.created_on,
+                '%m/%Y'
+            ) AS manuf_month,
 
-dl.contact_person
+            ar.state,
 
-FROM vehicle v
+            dl.contact_person
 
-LEFT JOIN device d
-ON v.device_id=d.id
+        FROM vehicle v
 
-LEFT JOIN esim e
-ON d.esim_id=e.id
+        LEFT JOIN device d
+            ON v.device_id = d.id
 
-LEFT JOIN dealer dl
-ON dl.id=d.dealer_id
+        LEFT JOIN esim e
+            ON d.esim_id = e.id
 
-LEFT JOIN activation_vin av
-ON av.vin=v.vin
+        LEFT JOIN dealer dl
+            ON dl.id = d.dealer_id
 
-LEFT JOIN activation_request ar
-ON ar.id=av.activation_request_id
+        LEFT JOIN activation_vin av
+            ON av.vin = v.vin
 
-WHERE v.vin=%s
+        LEFT JOIN activation_request ar
+            ON ar.id = av.activation_request_id
 
-LIMIT 1
+        WHERE TRIM(v.vin)=TRIM(%s)
 
-"""
+        LIMIT 1
 
-    cur.execute(
-        sql,
-        (vin.strip(),)
-    )
+        """
 
-    result = cur.fetchone()
+        cur.execute(
+            sql,
+            (vin,)
+        )
 
-    conn.close()
+        result = cur.fetchone()
+
+        print("VIN SEARCH RESULT:", result)
+
+        return result
+
+    except Exception as e:
+
+        print("Search Error:", e)
+
+        return None
+
+    finally:
+
+        conn.close()
 
     return result
 
