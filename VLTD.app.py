@@ -1,82 +1,170 @@
-import streamlit as st
-import pandas as pd
-import openpyxl
-import json
 import os
+import json
+import openpyxl
+import pandas as pd
+import streamlit as st
 from datetime import datetime
 import pytz
 
-# ================= CONFIG =================
+SAVE_FOLDER = (
+r"D:\OneDrive - 太思科技股份有限公司"
+r"\Desktop\rajan\python\VLTD"
+)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.makedirs(
+SAVE_FOLDER,
+exist_ok=True
+)
 
-DATA_FILE = os.path.join(BASE_DIR, "tagging_requests.json")
-EXCEL_FILE = os.path.join(BASE_DIR, "VLTD Tagging data.xlsx")
+DATA_FILE = os.path.join(
+SAVE_FOLDER,
+"tagging_requests.json"
+)
 
-IST = pytz.timezone("Asia/Kolkata")
+EXCEL_FILE = os.path.join(
+SAVE_FOLDER,
+"VLTD Tagging data.xlsx"
+)
 
+IST = pytz.timezone(
+"Asia/Kolkata"
+)
 
-# ================= LOAD =================
+================= LOAD =================
 
 def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
 
+if os.path.exists(
+    DATA_FILE
+):
 
-# ================= SAVE =================
+    with open(
+        DATA_FILE,
+        "r",
+        encoding="utf-8"
+    ) as f:
+
+        return json.load(
+            f
+        )
+
+return []
+================= SAVE =================
 
 def save_data(data):
 
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4)
+# Save JSON
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "VLTD Tagging"
+with open(
+    DATA_FILE,
+    "w",
+    encoding="utf-8"
+) as f:
 
-    headers = [
-        "ID",
-        "VIN",
-        "State",
-        "Dealer Code",
-        "Request Date",
-        "Vahan Status",
-        "Vahan tagged by",
-        "Forwarded to Lumax",
-        "Forwarded Time",
-        "Remarks",
-        "Tagging Status",
-        "Statebackend tagged by",
-        "Closure Date"
-    ]
+    json.dump(
+        data,
+        f,
+        indent=4,
+        ensure_ascii=False
+    )
 
-    ws.append(headers)
+# Save Excel
 
-    for r in data:
+wb = openpyxl.Workbook()
 
-        ws.append([
+ws = wb.active
 
-            r.get("id"),
-            r.get("vin"),
-            r.get("state"),
-            r.get("dealer_code"),
-            r.get("request_date"),
-            r.get("vahan_status"),
-            r.get("vahan_tagged_by"),
-            "Yes" if r.get("forwarded_to_lumax") else "No",
-            r.get("forwarded_time"),
-            r.get("remarks"),
-            r.get("tagging_status"),
-            r.get("backend_tagged_by"),
-            r.get("closure_date")
+ws.title = (
+    "VLTD Tagging"
+)
 
-        ])
+headers = [
 
-    wb.save(EXCEL_FILE)
+    "ID",
+    "VIN",
+    "State",
+    "Dealer Code",
+    "Request Date",
+    "Vahan Status",
+    "Vahan tagged by",
+    "Forwarded to Lumax",
+    "Forwarded Time",
+    "Remarks",
+    "Tagging Status",
+    "Statebackend tagged by",
+    "Closure Date"
 
+]
 
+ws.append(
+    headers
+)
+
+for r in data:
+
+    ws.append([
+
+        r.get("id"),
+
+        r.get("vin"),
+
+        r.get("state"),
+
+        r.get(
+            "dealer_code"
+        ),
+
+        r.get(
+            "request_date"
+        ),
+
+        r.get(
+            "vahan_status"
+        ),
+
+        r.get(
+            "vahan_tagged_by"
+        ),
+
+        "Yes"
+
+        if r.get(
+            "forwarded_to_lumax"
+        )
+
+        else
+
+        "No",
+
+        r.get(
+            "forwarded_time"
+        ),
+
+        r.get(
+            "remarks"
+        ),
+
+        r.get(
+            "tagging_status"
+        ),
+
+        r.get(
+            "backend_tagged_by"
+        ),
+
+        r.get(
+            "closure_date"
+        )
+
+    ])
+
+wb.save(
+    EXCEL_FILE
+)
+
+st.success(
+    f"Saved to:\n{EXCEL_FILE}"
+)
 # ================= APP =================
 
 st.set_page_config(
