@@ -27,7 +27,7 @@ def get_connection():
             password="kG7TwbkkSGZd86mX",   # Replace
             database="taisys_connect",
             port=3306,
-            connect_timeout=10,
+            connect_timeout=20,
             cursorclass=pymysql.cursors.DictCursor
         )
 
