@@ -9,7 +9,7 @@ import pytz
 
 # ================= CONFIG =================
 
-SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
+SAVE_FOLDER = r""D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx""
 
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
