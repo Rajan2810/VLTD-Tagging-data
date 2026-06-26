@@ -6,35 +6,58 @@ import os
 from datetime import datetime
 import pytz
 
-# ---------------- CONFIG ----------------
 
-DATA_FILE = "tagging_requests.json"
-EXCEL_FILE = "VLTD Tagging data.xlsx"
+# ================= CONFIG =================
+
+SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
+
+os.makedirs(SAVE_FOLDER, exist_ok=True)
+
+DATA_FILE = os.path.join(
+    SAVE_FOLDER,
+    "tagging_requests.json"
+)
+
+EXCEL_FILE = os.path.join(
+    SAVE_FOLDER,
+    "VLTD Tagging data.xlsx"
+)
 
 IST = pytz.timezone("Asia/Kolkata")
 
 
-# ---------------- FUNCTIONS ----------------
+# ================= LOAD =================
 
 def load_data():
 
     if os.path.exists(DATA_FILE):
 
-        with open(DATA_FILE, "r") as f:
+        with open(
+            DATA_FILE,
+            "r",
+            encoding="utf-8"
+        ) as f:
 
             return json.load(f)
 
     return []
 
 
+# ================= SAVE =================
+
 def save_data(data):
 
-    with open(DATA_FILE, "w") as f:
+    with open(
+        DATA_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
 
         json.dump(
             data,
             f,
-            indent=4
+            indent=4,
+            ensure_ascii=False
         )
 
     wb = openpyxl.Workbook()
@@ -74,11 +97,21 @@ def save_data(data):
             r.get("request_date"),
             r.get("vahan_status"),
             r.get("vahan_tagged_by"),
-            "Yes" if r.get("forwarded_to_lumax") else "No",
+
+            "Yes"
+            if r.get(
+                "forwarded_to_lumax"
+            )
+            else "No",
+
             r.get("forwarded_time"),
+
             r.get("remarks"),
+
             r.get("tagging_status"),
+
             r.get("backend_tagged_by"),
+
             r.get("closure_date")
 
         ])
@@ -86,7 +119,7 @@ def save_data(data):
     wb.save(EXCEL_FILE)
 
 
-# ---------------- APP ----------------
+# ================= APP =================
 
 st.set_page_config(
     page_title="VLTD Tagging",
@@ -95,21 +128,32 @@ st.set_page_config(
 
 st.title("VLTD Tagging Management")
 
+
 data = load_data()
 
+
 menu = st.sidebar.selectbox(
+
     "Menu",
+
     [
+
         "Add Request",
+
         "Bulk Upload",
+
         "Vahan Status",
+
         "Backend Status",
+
         "Download Data"
+
     ]
+
 )
 
 
-# ---------------- ADD REQUEST ----------------
+# ================= ADD =================
 
 if menu == "Add Request":
 
@@ -121,7 +165,9 @@ if menu == "Add Request":
 
         state = st.text_input("State")
 
-        dealer = st.text_input("Dealer Code")
+        dealer = st.text_input(
+            "Dealer Code"
+        )
 
         submit = st.form_submit_button(
             "Add"
@@ -131,44 +177,49 @@ if menu == "Add Request":
 
             data.append({
 
-                "id": len(data) + 1,
+                "id":
+                len(data)+1,
 
-                "vin": vin,
+                "vin":
+                vin,
 
-                "state": state,
+                "state":
+                state,
 
-                "dealer_code": dealer,
+                "dealer_code":
+                dealer,
 
                 "request_date":
-                    datetime.now(
-                        IST
-                    ).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
+
+                datetime.now(
+                    IST
+                ).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
 
                 "vahan_status":
-                    "Pending",
+                "Pending",
 
                 "vahan_tagged_by":
-                    None,
+                None,
 
                 "forwarded_to_lumax":
-                    False,
+                False,
 
                 "forwarded_time":
-                    None,
+                None,
 
                 "remarks":
-                    "",
+                "",
 
                 "tagging_status":
-                    None,
+                None,
 
                 "backend_tagged_by":
-                    None,
+                None,
 
                 "closure_date":
-                    None
+                None
 
             })
 
@@ -179,16 +230,19 @@ if menu == "Add Request":
             )
 
 
-# ---------------- BULK ----------------
+# ================= BULK =================
 
 elif menu == "Bulk Upload":
 
     file = st.file_uploader(
-        "Upload File",
+
+        "Upload",
+
         type=[
             "xlsx",
             "csv"
         ]
+
     )
 
     if file:
@@ -197,7 +251,9 @@ elif menu == "Bulk Upload":
             ".csv"
         ):
 
-            df = pd.read_csv(file)
+            df = pd.read_csv(
+                file
+            )
 
         else:
 
@@ -216,49 +272,50 @@ elif menu == "Bulk Upload":
                 data.append({
 
                     "id":
-                        len(data)+1,
+                    len(data)+1,
 
                     "vin":
-                        row["VIN"],
+                    row["VIN"],
 
                     "state":
-                        row["State"],
+                    row["State"],
 
                     "dealer_code":
-                        row[
-                            "Dealer Code"
-                        ],
+                    row[
+                        "Dealer Code"
+                    ],
 
                     "request_date":
-                        datetime.now(
-                            IST
-                        ).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        ),
+
+                    datetime.now(
+                        IST
+                    ).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
 
                     "vahan_status":
-                        "Pending",
+                    "Pending",
 
                     "vahan_tagged_by":
-                        None,
+                    None,
 
                     "forwarded_to_lumax":
-                        False,
+                    False,
 
                     "forwarded_time":
-                        None,
+                    None,
 
                     "remarks":
-                        "",
+                    "",
 
                     "tagging_status":
-                        None,
+                    None,
 
                     "backend_tagged_by":
-                        None,
+                    None,
 
                     "closure_date":
-                        None
+                    None
 
                 })
 
@@ -269,19 +326,17 @@ elif menu == "Bulk Upload":
             )
 
 
-# ---------------- VAHAN ----------------
+# ================= VAHAN =================
 
 elif menu == "Vahan Status":
 
-    st.subheader(
-        "Vahan Status"
-    )
-
     visible = [
 
-        r for r in data
+        x
 
-        if not r.get(
+        for x in data
+
+        if not x.get(
             "forwarded_to_lumax"
         )
 
@@ -295,16 +350,21 @@ elif menu == "Vahan Status":
 
     req = st.number_input(
         "Request ID",
-        min_value=1,
-        step=1
+        min_value=1
     )
 
     status = st.selectbox(
+
         "Vahan Status",
+
         [
+
             "Pending",
+
             "Done"
+
         ]
+
     )
 
     remarks = st.text_input(
@@ -312,12 +372,19 @@ elif menu == "Vahan Status":
     )
 
     tagged = st.selectbox(
+
         "Vahan Tagged By",
+
         [
+
             "Rajan",
+
             "Vishal",
+
             "Lumax Team"
+
         ]
+
     )
 
     if st.button(
@@ -350,7 +417,7 @@ elif menu == "Vahan Status":
         "Forward To Lumax"
     ):
 
-        ok = False
+        done = False
 
         for r in data:
 
@@ -380,11 +447,11 @@ elif menu == "Vahan Status":
                     "%Y-%m-%d %H:%M:%S"
                 )
 
-                ok = True
+                done = True
 
         save_data(data)
 
-        if ok:
+        if done:
 
             st.success(
                 "Forwarded"
@@ -397,19 +464,17 @@ elif menu == "Vahan Status":
             )
 
 
-# ---------------- BACKEND ----------------
+# ================= BACKEND =================
 
 elif menu == "Backend Status":
 
-    st.subheader(
-        "Backend Status"
-    )
-
     backend = [
 
-        r for r in data
+        x
 
-        if r.get(
+        for x in data
+
+        if x.get(
             "forwarded_to_lumax"
         )
 
@@ -423,29 +488,41 @@ elif menu == "Backend Status":
 
     req = st.number_input(
         "Request ID ",
-        min_value=1,
-        step=1
+        min_value=1
     )
 
     status = st.selectbox(
+
         "Tagging Status",
+
         [
+
             "Pending",
+
             "Completed"
+
         ]
+
     )
 
     remarks = st.text_input(
-        "Backend Remarks"
+        "Remarks "
     )
 
     tagged = st.selectbox(
+
         "Backend Tagged By",
+
         [
+
             "Rajan",
+
             "Vishal",
+
             "Lumax Team"
+
         ]
+
     )
 
     if st.button(
@@ -469,9 +546,11 @@ elif menu == "Backend Status":
                 ] = tagged
 
                 if (
+
                     status
                     ==
                     "Completed"
+
                 ):
 
                     r[
@@ -489,31 +568,31 @@ elif menu == "Backend Status":
         )
 
 
-# ---------------- DOWNLOAD ----------------
+# ================= DOWNLOAD =================
 
 elif menu == "Download Data":
 
     save_data(data)
 
-    if os.path.exists(
+    with open(
+        EXCEL_FILE,
+        "rb"
+    ) as f:
+
+        st.download_button(
+
+            "⬇ Download Excel",
+
+            data=f,
+
+            file_name=
+            "VLTD Tagging data.xlsx",
+
+            mime=
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+        )
+
+    st.success(
         EXCEL_FILE
-    ):
-
-        with open(
-            EXCEL_FILE,
-            "rb"
-        ) as file:
-
-            st.download_button(
-
-                "⬇ Download Excel",
-
-                file,
-
-                file_name=
-                "VLTD Tagging data.xlsx",
-
-                mime=
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-            )
+    )
