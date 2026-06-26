@@ -1,27 +1,18 @@
 import streamlit as st
-from flask import request, redirect
-from flask import url_for
-from flask import send_file, flash
-
-from datetime import datetime
-
+import pandas as pd
+import pymysql
+import pytz
 import json
 import os
-import uuid
-
-import pandas as pd
-import openpyxl
-import pytz
-import pymysql
+from datetime import datetime
 
 
-DATA_FILE="tagging_requests.json"
-EXCEL_FILE="tagging_requests.xlsx"
+# ================= CONFIG =================
 
-IST=pytz.timezone("Asia/Kolkata")
+DATA_FILE = "tagging_requests.json"
+EXCEL_FILE = "tagging_requests.xlsx"
 
-# ================= DATABASE =================
-import pymysql
+IST = pytz.timezone("Asia/Kolkata")
 
 
 # ================= DATABASE =================
@@ -33,7 +24,7 @@ def get_connection():
         conn = pymysql.connect(
             host="esimproddb.taisys.in",
             user="iconnect_user",
-            password="YOUR_PASSWORD",
+            password="YOUR_PASSWORD",   # Replace
             database="taisys_connect",
             port=3306,
             connect_timeout=10,
@@ -44,18 +35,18 @@ def get_connection():
 
     except Exception as e:
 
-        print("DB Connection Error:", e)
+        st.error(f"DB Error: {e}")
 
         return None
 
 
-# ================= SQL SEARCH =================
+# ================= SEARCH VIN =================
 
 def search_vin(vin):
 
     conn = get_connection()
 
-    if not conn:
+    if conn is None:
         return None
 
     try:
@@ -64,47 +55,48 @@ def search_vin(vin):
 
         sql = """
 
-        SELECT
+SELECT
 
-            v.vin,
+v.vin,
 
-            d.esn AS unique_device_code,
+d.esn AS unique_device_code,
 
-            d.imei,
+d.imei,
 
-            e.primary_iccid AS iccid,
+e.primary_iccid AS iccid,
 
-            DATE_FORMAT(
-                d.created_on,
-                '%m/%Y'
-            ) AS manuf_month,
+DATE_FORMAT(
+d.created_on,
+'%m/%Y'
+) manuf_month,
 
-            ar.state,
+ar.state,
 
-            dl.contact_person
+dl.contact_person
 
-        FROM vehicle v
+FROM vehicle v
 
-        LEFT JOIN device d
-            ON v.device_id = d.id
+LEFT JOIN device d
+ON d.id=v.device_id
 
-        LEFT JOIN esim e
-            ON d.esim_id = e.id
+LEFT JOIN esim e
+ON e.id=d.esim_id
 
-        LEFT JOIN dealer dl
-            ON dl.id = d.dealer_id
+LEFT JOIN dealer dl
+ON dl.id=d.dealer_id
 
-        LEFT JOIN activation_vin av
-            ON av.vin = v.vin
+LEFT JOIN activation_vin av
+ON av.vin=v.vin
 
-        LEFT JOIN activation_request ar
-            ON ar.id = av.activation_request_id
+LEFT JOIN activation_request ar
+ON ar.id=av.activation_request_id
 
-        WHERE TRIM(v.vin)=TRIM(%s)
+WHERE
+TRIM(v.vin)=TRIM(%s)
 
-        LIMIT 1
+LIMIT 1
 
-        """
+"""
 
         cur.execute(
             sql,
@@ -113,13 +105,13 @@ def search_vin(vin):
 
         result = cur.fetchone()
 
-        print("VIN SEARCH RESULT:", result)
-
         return result
 
     except Exception as e:
 
-        print("Search Error:", e)
+        st.error(
+            f"Search Error: {e}"
+        )
 
         return None
 
@@ -127,7 +119,8 @@ def search_vin(vin):
 
         conn.close()
 
-    return result
+
+# ================= FILE =================
 
 def load_data():
 
@@ -164,93 +157,186 @@ def save_data(data):
     )
 
 
-st.title(
-"VLTD Tagging Data Tracking"
+# ================= UI =================
+
+st.set_page_config(
+    page_title="VLTD Tracking",
+    layout="wide"
 )
 
-vin=st.text_input(
-"Enter VIN"
+st.title(
+    "VLTD Tagging Data Tracking"
 )
+
+vin = st.text_input(
+    "Enter VIN"
+)
+
 
 if st.button(
-"Search"
+    "Search"
 ):
 
-    data=load_data()
+    if not vin:
 
-    row=None
-
-    for r in data:
-
-        if r["vin"]==vin:
-
-            row=r
-
-            break
-
-    if not row:
-
-        st.error(
-        "VIN NOT MAPPED"
+        st.warning(
+            "Enter VIN"
         )
 
     else:
 
-        if row["vahan_status"]=="Pending":
+        record = search_vin(vin)
 
-            output=(
-                "LIT1|"
-                "LIT1LIA022600053884|"
-                "860982089793432|"
-                "8991102506560327863|"
-                "03/2026|214"
+        if record is None:
+
+            st.error(
+                "VIN NOT MAPPED"
             )
 
-            st.code(output)
+        else:
 
-            state=st.selectbox(
+            st.success(
+                "VIN FOUND"
+            )
+
+            output = (
+
+                "LIT1|"
+
+                f"{record['unique_device_code']}|"
+
+                f"{record['imei']}|"
+
+                f"{record['iccid']}|"
+
+                f"{record['manuf_month']}|"
+
+                "214"
+
+            )
+
+            st.subheader(
+                "Output"
+            )
+
+            st.code(
+                output
+            )
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+
+                st.write(
+                    "Dealer",
+                    record.get(
+                        "contact_person",
+                        "-"
+                    )
+                )
+
+            with c2:
+
+                st.write(
+                    "State",
+                    record.get(
+                        "state",
+                        "-"
+                    )
+                )
+
+            state = st.selectbox(
+
                 "Select State",
+
                 [
+
                     "Haryana",
+
                     "Rajasthan",
+
                     "UP",
-                    "Delhi"
+
+                    "Delhi",
+
+                    "Punjab"
+
                 ]
+
             )
 
             if st.button(
                 "Submit"
             ):
 
-                row["state"]=state
+                data = load_data()
 
-                row[
-                    "request_date"
-                ]=(
+                data.append({
+
+                    "VIN":
+                    record["vin"],
+
+                    "Unique Device":
+
+                    record[
+                        "unique_device_code"
+                    ],
+
+                    "IMEI":
+
+                    record[
+                        "imei"
+                    ],
+
+                    "ICCID":
+
+                    record[
+                        "iccid"
+                    ],
+
+                    "MFG":
+
+                    record[
+                        "manuf_month"
+                    ],
+
+                    "Selected State":
+
+                    state,
+
+                    "Request Date":
+
                     datetime.now(
                         IST
-                    )
-                    .strftime(
+                    ).strftime(
                         "%Y-%m-%d %H:%M:%S"
-                    )
-                )
+                    ),
+
+                    "Vahan Status":
+
+                    "Pending"
+
+                })
 
                 save_data(
                     data
                 )
 
                 st.success(
-                    "Submitted"
+                    "Request Saved"
                 )
 
-        else:
+                st.dataframe(
+                    pd.DataFrame(
+                        data
+                    )
+                )
 
-            st.success(
-                "Already Completed"
-            )
+
+# ================= DOWNLOAD =================
 
 if os.path.exists(
-EXCEL_FILE
+    EXCEL_FILE
 ):
 
     with open(
@@ -259,7 +345,11 @@ EXCEL_FILE
     ) as f:
 
         st.download_button(
+
             "Download Excel",
+
             f,
+
+            file_name=
             EXCEL_FILE
         )
