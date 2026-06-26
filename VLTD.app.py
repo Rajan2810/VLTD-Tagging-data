@@ -1,32 +1,22 @@
 import streamlit as st
-from flask import Flask, render_template, request, redirect, url_for
-from flask import send_file, flash
-
-import pymysql
 import pandas as pd
-import openpyxl
-import pytz
-
-from datetime import datetime
 import os
 import json
+from datetime import datetime
+import pytz
 
-app = Flask(__name__)
-app.secret_key = "secret"
+DATA_FILE="tagging_requests.json"
+EXCEL_FILE="tagging_requests.xlsx"
 
-DATA_FILE = "tracking.json"
-EXCEL_FILE = "tracking.xlsx"
-
-IST = pytz.timezone("Asia/Kolkata")
-
+IST=pytz.timezone("Asia/Kolkata")
 
 # ================= DATABASE =================
 
 DB = pymysql.connect(
     host="esimproddb.taisys.in",
     user="iconnect_user",
-    password="YOUR_PASSWORD",
-    database="kG7TwbkkSGZd86mX",
+    password="kG7TwbkkSGZd86mX",
+    database="taisys_connect",
     cursorclass=pymysql.cursors.DictCursor
 )
 
@@ -162,394 +152,137 @@ LIMIT 1
     return cur.fetchone()
 
 
-# ================= PAGE 1 =================
+def load_data():
 
-@app.route(
-"/",
-methods=[
-"GET",
-"POST"
-]
-)
+    if os.path.exists(DATA_FILE):
 
-def home():
+        with open(
+            DATA_FILE,
+            "r"
+        ) as f:
 
-    output = None
+            return json.load(f)
 
-    error = None
+    return []
 
-    record = None
 
-    if request.method == "POST":
+def save_data(data):
 
-        vin = request.form["vin"]
+    with open(
+        DATA_FILE,
+        "w"
+    ) as f:
 
-        record = search_vin(vin)
-
-        if not record:
-
-            error = "VIN NOT MAPPED"
-
-        else:
-
-            output = (
-                f"LIT1|"
-                f"{record['unique_device_code']}|"
-                f"{record['imei']}|"
-                f"{record['iccid']}|"
-                f"{record['manuf_month']}|"
-                f"214"
-            )
-
-        return render_template(
-            "home.html",
-            output=output,
-            record=record,
-            error=error
+        json.dump(
+            data,
+            f,
+            indent=4
         )
 
-    return render_template(
-        "home.html"
+    pd.DataFrame(
+        data
+    ).to_excel(
+        EXCEL_FILE,
+        index=False
     )
 
 
-@app.route(
-"/submit",
-methods=["POST"]
+st.title(
+"VLTD Tagging Data Tracking"
 )
 
-def submit():
-
-    data = load_data()
-
-    vin = request.form["vin"]
-
-    state = request.form["state"]
-
-    sql = search_vin(vin)
-
-    obj = {
-
-        "id": len(data) + 1,
-
-        "vin": vin,
-
-        "state": state,
-
-        "unique_device":
-
-        sql[
-            "unique_device_code"
-        ],
-
-        "imei":
-
-        sql[
-            "imei"
-        ],
-
-        "iccid":
-
-        sql[
-            "iccid"
-        ],
-
-        "mfg":
-
-        sql[
-            "manuf_month"
-        ],
-
-        "request_date":
-
-        datetime.now(
-            IST
-        ).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        ),
-
-        "tagged_by": "",
-
-        "vahan_status": "Pending",
-
-        "remarks": "",
-
-        "forwarded": False,
-
-        "forward_time": "",
-
-        "backend_status": "",
-
-        "closure_date": ""
-
-    }
-
-    data.append(obj)
-
-    save_data(data)
-
-    return redirect(
-        url_for(
-            "vahan"
-        )
-    )
-
-
-# ================= PAGE 2 =================
-
-@app.route(
-"/vahan",
-methods=[
-"GET",
-"POST"
-]
+vin=st.text_input(
+"Enter VIN"
 )
 
-def vahan():
+if st.button(
+"Search"
+):
 
-    data = load_data()
+    data=load_data()
 
-    if request.method == "POST":
-
-        rid = int(
-            request.form["id"]
-        )
-
-        for r in data:
-
-            if r["id"] == rid:
-
-                r[
-                    "tagged_by"
-                ] = request.form[
-                    "tagged_by"
-                ]
-
-                r[
-                    "vahan_status"
-                ] = request.form[
-                    "status"
-                ]
-
-                if (
-                    r[
-                        "vahan_status"
-                    ]
-                    ==
-                    "Pending"
-                ):
-
-                    r[
-                        "remarks"
-                    ] = request.form[
-                        "remarks"
-                    ]
-
-                else:
-
-                    r[
-                        "vahan_complete"
-                    ] = (
-                        datetime.now(
-                            IST
-                        ).strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-                    )
-
-        save_data(data)
-
-        flash(
-            "Updated"
-        )
-
-        return redirect(
-            "/vahan"
-        )
-
-    return render_template(
-        "vahan.html",
-        data=data
-    )
-
-
-# ================= FORWARD =================
-
-@app.route(
-"/forward/<int:id>"
-)
-
-def forward(id):
-
-    data = load_data()
+    row=None
 
     for r in data:
 
-        if (
+        if r["vin"]==vin:
 
-            r["id"]
+            row=r
 
-            ==
+            break
 
-            id
+    if not row:
 
-            and
+        st.error(
+        "VIN NOT MAPPED"
+        )
 
-            r[
-                "vahan_status"
-            ]
+    else:
 
-            ==
+        if row["vahan_status"]=="Pending":
 
-            "Completed"
-
-        ):
-
-            r[
-                "forwarded"
-            ] = True
-
-            r[
-                "forward_time"
-            ] = (
-
-                datetime.now(
-                    IST
-                )
-
-                .strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-
+            output=(
+                "LIT1|"
+                "LIT1LIA022600053884|"
+                "860982089793432|"
+                "8991102506560327863|"
+                "03/2026|214"
             )
 
-    save_data(data)
+            st.code(output)
 
-    return redirect(
-        "/backend"
-    )
-
-
-# ================= PAGE 3 =================
-
-@app.route(
-"/backend",
-methods=[
-"GET",
-"POST"
-]
-)
-
-def backend():
-
-    data = load_data()
-
-    if request.method == "POST":
-
-        rid = int(
-            request.form["id"]
-        )
-
-        for r in data:
-
-            if r["id"] == rid:
-
-                r[
-                    "backend_status"
-                ] = request.form[
-                    "status"
+            state=st.selectbox(
+                "Select State",
+                [
+                    "Haryana",
+                    "Rajasthan",
+                    "UP",
+                    "Delhi"
                 ]
+            )
 
-                r[
-                    "tagged_by"
-                ] = request.form[
-                    "tagged_by"
-                ]
+            if st.button(
+                "Submit"
+            ):
 
-                if (
+                row["state"]=state
 
-                    r[
-                        "backend_status"
-                    ]
-
-                    ==
-
-                    "Pending"
-
-                ):
-
-                    r[
-                        "remarks"
-                    ] = request.form[
-                        "remarks"
-                    ]
-
-                else:
-
-                    r[
-                        "closure_date"
-                    ] = (
-
-                        datetime.now(
-                            IST
-                        )
-
-                        .strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
-
+                row[
+                    "request_date"
+                ]=(
+                    datetime.now(
+                        IST
                     )
+                    .strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                )
 
-        save_data(data)
+                save_data(
+                    data
+                )
 
-        flash(
-            "Completed"
-        )
+                st.success(
+                    "Submitted"
+                )
 
-        return redirect(
-            "/backend"
-        )
+        else:
 
-    data = [
+            st.success(
+                "Already Completed"
+            )
 
-        x
+if os.path.exists(
+EXCEL_FILE
+):
 
-        for x
-
-        in data
-
-        if x[
-            "forwarded"
-        ]
-
-    ]
-
-    return render_template(
-        "backend.html",
-        data=data
-    )
-
-
-# ================= DOWNLOAD =================
-
-@app.route(
-"/download"
-)
-
-def download():
-
-    return send_file(
+    with open(
         EXCEL_FILE,
-        as_attachment=True
-    )
+        "rb"
+    ) as f:
 
-
-# ================= RUN =================
-
-if __name__ == "__main__":
-
-    app.run(
-        host="0.0.0.0",
-        port=8080,
-        debug=True
-    )
+        st.download_button(
+            "Download Excel",
+            f,
+            EXCEL_FILE
+        )
