@@ -306,14 +306,127 @@ elif menu == "Backend Status":
         )
 
 # ---------------- Download ----------------
-elif menu == "Download":
+elif menu == "Download Data":
 
-    if os.path.exists(EXCEL_FILE):
+save_data(data)
 
-        with open(EXCEL_FILE, "rb") as f:
+if os.path.exists(EXCEL_FILE):
 
-            st.download_button(
-                "Download Excel",
-                f,
-                file_name="tagging_requests.xlsx"
+    with open(
+        EXCEL_FILE,
+        "rb"
+    ) as file:
+
+        st.download_button(
+
+            label="⬇ Download Excel",
+
+            data=file,
+
+            file_name="VLTD Tagging data.xlsx",
+
+            mime=(
+                "application/"
+                "vnd.openxmlformats-officedocument"
+                ".spreadsheetml.sheet"
             )
+        )
+
+else:
+
+    st.error(
+        "Excel file not found"
+    )
+            )
+            # ---------------- Output File ----------------
+
+EXCEL_FILE = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx"
+
+# ---------------- Save Data ----------------
+
+def save_data(data):
+
+```
+with open(DATA_FILE, "w") as f:
+    json.dump(
+        data,
+        f,
+        indent=4,
+        default=str
+    )
+
+wb = openpyxl.Workbook()
+
+ws = wb.active
+
+ws.title = "VLTD Tagging"
+
+headers = [
+
+    "ID",
+    "VIN",
+    "State",
+    "Dealer Code",
+    "Request Date",
+    "Vahan Status",
+    "Vahan tagged by",
+    "Forwarded to Lumax",
+    "Forwarded Time",
+    "Remarks",
+    "Tagging Status",
+    "Statebackend tagged by",
+    "Closure Date"
+
+]
+
+ws.append(headers)
+
+for r in data:
+
+    ws.append([
+
+        r.get("id"),
+
+        r.get("vin"),
+
+        r.get("state"),
+
+        r.get("dealer_code"),
+
+        r.get("request_date"),
+
+        r.get("vahan_status"),
+
+        r.get("vahan_tagged_by"),
+
+        "Yes"
+        if r.get(
+            "forwarded_to_lumax"
+        )
+        else "No",
+
+        r.get(
+            "forwarded_time"
+        ),
+
+        r.get(
+            "remarks"
+        ),
+
+        r.get(
+            "tagging_status"
+        ),
+
+        r.get(
+            "backend_tagged_by"
+        ),
+
+        r.get(
+            "closure_date"
+        )
+
+    ])
+
+wb.save(EXCEL_FILE)
+```
+
