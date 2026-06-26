@@ -21,27 +21,31 @@ EXCEL_FILE="tagging_requests.xlsx"
 IST=pytz.timezone("Asia/Kolkata")
 
 # ================= DATABASE =================
+def get_connection():
 
-DB = pymysql.connect(
-    host="esimproddb.taisys.in",
-    user="iconnect_user",
-    password="kG7TwbkkSGZd86mX",
-    database="taisys_connect",
-    cursorclass=pymysql.cursors.DictCursor
-)
+    try:
 
+        return pymysql.connect(
+            host="esimproddb.taisys.in",
+            user="iconnect_user",
+            password="kG7TwbkkSGZd86mX",
+            database="taisys_connect",
 
-# ================= FILE =================
+            port=3306,
 
-def load_data():
+            connect_timeout=10,
 
-    if os.path.exists(DATA_FILE):
+            cursorclass=pymysql.cursors.DictCursor
+        )
 
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
+    except Exception as e:
 
-    return []
+        print(
+            "DB Error:",
+            str(e)
+        )
 
+        return None
 
 def save_data(data):
 
