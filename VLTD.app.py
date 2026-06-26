@@ -6,22 +6,12 @@ import os
 from datetime import datetime
 import pytz
 
-
 # ================= CONFIG =================
 
-SAVE_FOLDER = r""D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx""
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-os.makedirs(SAVE_FOLDER, exist_ok=True)
-
-DATA_FILE = os.path.join(
-    SAVE_FOLDER,
-    "tagging_requests.json"
-)
-
-EXCEL_FILE = os.path.join(
-    SAVE_FOLDER,
-    "VLTD Tagging data.xlsx"
-)
+DATA_FILE = os.path.join(BASE_DIR, "tagging_requests.json")
+EXCEL_FILE = os.path.join(BASE_DIR, "VLTD Tagging data.xlsx")
 
 IST = pytz.timezone("Asia/Kolkata")
 
@@ -29,17 +19,9 @@ IST = pytz.timezone("Asia/Kolkata")
 # ================= LOAD =================
 
 def load_data():
-
     if os.path.exists(DATA_FILE):
-
-        with open(
-            DATA_FILE,
-            "r",
-            encoding="utf-8"
-        ) as f:
-
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-
     return []
 
 
@@ -47,27 +29,14 @@ def load_data():
 
 def save_data(data):
 
-    with open(
-        DATA_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            data,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
 
     wb = openpyxl.Workbook()
-
     ws = wb.active
-
     ws.title = "VLTD Tagging"
 
     headers = [
-
         "ID",
         "VIN",
         "State",
@@ -81,7 +50,6 @@ def save_data(data):
         "Tagging Status",
         "Statebackend tagged by",
         "Closure Date"
-
     ]
 
     ws.append(headers)
@@ -97,21 +65,11 @@ def save_data(data):
             r.get("request_date"),
             r.get("vahan_status"),
             r.get("vahan_tagged_by"),
-
-            "Yes"
-            if r.get(
-                "forwarded_to_lumax"
-            )
-            else "No",
-
+            "Yes" if r.get("forwarded_to_lumax") else "No",
             r.get("forwarded_time"),
-
             r.get("remarks"),
-
             r.get("tagging_status"),
-
             r.get("backend_tagged_by"),
-
             r.get("closure_date")
 
         ])
@@ -128,28 +86,17 @@ st.set_page_config(
 
 st.title("VLTD Tagging Management")
 
-
 data = load_data()
 
-
 menu = st.sidebar.selectbox(
-
     "Menu",
-
     [
-
         "Add Request",
-
         "Bulk Upload",
-
         "Vahan Status",
-
         "Backend Status",
-
         "Download Data"
-
     ]
-
 )
 
 
@@ -157,77 +104,52 @@ menu = st.sidebar.selectbox(
 
 if menu == "Add Request":
 
-    st.subheader("Add Request")
-
     with st.form("add"):
 
         vin = st.text_input("VIN")
-
         state = st.text_input("State")
+        dealer = st.text_input("Dealer Code")
 
-        dealer = st.text_input(
-            "Dealer Code"
-        )
-
-        submit = st.form_submit_button(
-            "Add"
-        )
+        submit = st.form_submit_button("Add")
 
         if submit:
 
             data.append({
 
-                "id":
-                len(data)+1,
+                "id": len(data)+1,
 
-                "vin":
-                vin,
+                "vin": vin,
 
-                "state":
-                state,
+                "state": state,
 
-                "dealer_code":
-                dealer,
+                "dealer_code": dealer,
 
                 "request_date":
-
-                datetime.now(
-                    IST
-                ).strftime(
+                datetime.now(IST).strftime(
                     "%Y-%m-%d %H:%M:%S"
                 ),
 
-                "vahan_status":
-                "Pending",
+                "vahan_status": "Pending",
 
-                "vahan_tagged_by":
-                None,
+                "vahan_tagged_by": None,
 
-                "forwarded_to_lumax":
-                False,
+                "forwarded_to_lumax": False,
 
-                "forwarded_time":
-                None,
+                "forwarded_time": None,
 
-                "remarks":
-                "",
+                "remarks": "",
 
-                "tagging_status":
-                None,
+                "tagging_status": None,
 
-                "backend_tagged_by":
-                None,
+                "backend_tagged_by": None,
 
-                "closure_date":
-                None
+                "closure_date": None
 
             })
 
             save_data(data)
 
-            st.success(
-                "Request Added"
-            )
+            st.success("Added")
 
 
 # ================= BULK =================
@@ -235,118 +157,74 @@ if menu == "Add Request":
 elif menu == "Bulk Upload":
 
     file = st.file_uploader(
-
         "Upload",
-
-        type=[
-            "xlsx",
-            "csv"
-        ]
-
+        type=["xlsx", "csv"]
     )
 
     if file:
 
-        if file.name.endswith(
-            ".csv"
-        ):
-
-            df = pd.read_csv(
-                file
-            )
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
 
         else:
-
-            df = pd.read_excel(
-                file
-            )
+            df = pd.read_excel(file)
 
         st.dataframe(df)
 
-        if st.button(
-            "Confirm Upload"
-        ):
+        if st.button("Confirm Upload"):
 
             for _, row in df.iterrows():
 
                 data.append({
 
-                    "id":
-                    len(data)+1,
+                    "id": len(data)+1,
 
-                    "vin":
-                    row["VIN"],
+                    "vin": row["VIN"],
 
-                    "state":
-                    row["State"],
+                    "state": row["State"],
 
-                    "dealer_code":
-                    row[
-                        "Dealer Code"
-                    ],
+                    "dealer_code": row["Dealer Code"],
 
                     "request_date":
-
-                    datetime.now(
-                        IST
-                    ).strftime(
+                    datetime.now(IST).strftime(
                         "%Y-%m-%d %H:%M:%S"
                     ),
 
-                    "vahan_status":
-                    "Pending",
+                    "vahan_status": "Pending",
 
-                    "vahan_tagged_by":
-                    None,
+                    "vahan_tagged_by": None,
 
-                    "forwarded_to_lumax":
-                    False,
+                    "forwarded_to_lumax": False,
 
-                    "forwarded_time":
-                    None,
+                    "forwarded_time": None,
 
-                    "remarks":
-                    "",
+                    "remarks": "",
 
-                    "tagging_status":
-                    None,
+                    "tagging_status": None,
 
-                    "backend_tagged_by":
-                    None,
+                    "backend_tagged_by": None,
 
-                    "closure_date":
-                    None
+                    "closure_date": None
 
                 })
 
             save_data(data)
 
-            st.success(
-                "Upload Complete"
-            )
+            st.success("Upload Complete")
 
 
 # ================= VAHAN =================
 
 elif menu == "Vahan Status":
 
-    visible = [
-
-        x
-
-        for x in data
-
+    df = pd.DataFrame([
+        x for x in data
         if not x.get(
             "forwarded_to_lumax"
         )
+    ])
 
-    ]
-
-    st.dataframe(
-        pd.DataFrame(
-            visible
-        )
-    )
+    st.dataframe(df)
 
     req = st.number_input(
         "Request ID",
@@ -354,85 +232,49 @@ elif menu == "Vahan Status":
     )
 
     status = st.selectbox(
-
         "Vahan Status",
-
-        [
-
-            "Pending",
-
-            "Done"
-
-        ]
-
+        ["Pending", "Done"]
     )
 
-    remarks = st.text_input(
-        "Remarks"
-    )
+    remarks = st.text_input("Remarks")
 
     tagged = st.selectbox(
-
         "Vahan Tagged By",
-
         [
-
             "Rajan",
-
             "Vishal",
-
             "Lumax Team"
-
         ]
-
     )
 
-    if st.button(
-        "Update Vahan"
-    ):
+    if st.button("Update"):
 
         for r in data:
 
             if r["id"] == req:
 
-                r[
-                    "vahan_status"
-                ] = status
+                r["vahan_status"] = status
 
-                r[
-                    "remarks"
-                ] = remarks
+                r["remarks"] = remarks
 
-                r[
-                    "vahan_tagged_by"
-                ] = tagged
+                r["vahan_tagged_by"] = tagged
 
         save_data(data)
 
-        st.success(
-            "Updated"
-        )
+        st.success("Updated")
 
     if st.button(
         "Forward To Lumax"
     ):
 
-        done = False
+        ok = False
 
         for r in data:
 
             if (
-
                 r["id"] == req
-
                 and
-
-                r[
-                    "vahan_status"
-                ]
-                ==
-                "Done"
-
+                r["vahan_status"] == "Done"
             ):
 
                 r[
@@ -447,20 +289,15 @@ elif menu == "Vahan Status":
                     "%Y-%m-%d %H:%M:%S"
                 )
 
-                done = True
+                ok = True
 
         save_data(data)
 
-        if done:
-
-            st.success(
-                "Forwarded"
-            )
-
+        if ok:
+            st.success("Forwarded")
         else:
-
             st.error(
-                "Status must be Done"
+                "Update status to Done first"
             )
 
 
@@ -468,23 +305,14 @@ elif menu == "Vahan Status":
 
 elif menu == "Backend Status":
 
-    backend = [
-
-        x
-
-        for x in data
-
+    backend = pd.DataFrame([
+        x for x in data
         if x.get(
             "forwarded_to_lumax"
         )
+    ])
 
-    ]
-
-    st.dataframe(
-        pd.DataFrame(
-            backend
-        )
-    )
+    st.dataframe(backend)
 
     req = st.number_input(
         "Request ID ",
@@ -492,37 +320,24 @@ elif menu == "Backend Status":
     )
 
     status = st.selectbox(
-
         "Tagging Status",
-
         [
-
             "Pending",
-
             "Completed"
-
         ]
-
     )
 
     remarks = st.text_input(
-        "Remarks "
+        "Backend Remarks"
     )
 
     tagged = st.selectbox(
-
         "Backend Tagged By",
-
         [
-
             "Rajan",
-
             "Vishal",
-
             "Lumax Team"
-
         ]
-
     )
 
     if st.button(
@@ -545,13 +360,7 @@ elif menu == "Backend Status":
                     "backend_tagged_by"
                 ] = tagged
 
-                if (
-
-                    status
-                    ==
-                    "Completed"
-
-                ):
+                if status == "Completed":
 
                     r[
                         "closure_date"
@@ -563,9 +372,7 @@ elif menu == "Backend Status":
 
         save_data(data)
 
-        st.success(
-            "Backend Updated"
-        )
+        st.success("Saved")
 
 
 # ================= DOWNLOAD =================
@@ -583,7 +390,7 @@ elif menu == "Download Data":
 
             "⬇ Download Excel",
 
-            data=f,
+            f,
 
             file_name=
             "VLTD Tagging data.xlsx",
@@ -592,7 +399,3 @@ elif menu == "Download Data":
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
         )
-
-    st.success(
-        EXCEL_FILE
-    )
