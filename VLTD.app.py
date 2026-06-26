@@ -24,7 +24,7 @@ def get_connection():
         conn = pymysql.connect(
             host="esimproddb.taisys.in",
             user="iconnect_user",
-            password="YOUR_PASSWORD",   # Replace
+            password="kG7TwbkkSGZd86mX",   # Replace
             database="taisys_connect",
             port=3306,
             connect_timeout=10,
