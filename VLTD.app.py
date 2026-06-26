@@ -6,66 +6,96 @@ import os
 from datetime import datetime
 import pytz
 
-# ---------------- Config ----------------
+# ---------------- CONFIG ----------------
+
 DATA_FILE = "tagging_requests.json"
-EXCEL_FILE = "tagging_requests.xlsx"
+EXCEL_FILE = "VLTD Tagging data.xlsx"
+
 IST = pytz.timezone("Asia/Kolkata")
 
 
-# ---------------- Functions ----------------
+# ---------------- FUNCTIONS ----------------
+
 def load_data():
+
     if os.path.exists(DATA_FILE):
+
         with open(DATA_FILE, "r") as f:
+
             return json.load(f)
+
     return []
 
 
 def save_data(data):
+
     with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+
+        json.dump(
+            data,
+            f,
+            indent=4
+        )
 
     wb = openpyxl.Workbook()
+
     ws = wb.active
-    ws.title = "Tagging Requests"
+
+    ws.title = "VLTD Tagging"
 
     headers = [
+
         "ID",
         "VIN",
         "State",
         "Dealer Code",
         "Request Date",
         "Vahan Status",
-        "Forwarded",
+        "Vahan tagged by",
+        "Forwarded to Lumax",
         "Forwarded Time",
         "Remarks",
         "Tagging Status",
+        "Statebackend tagged by",
         "Closure Date"
+
     ]
 
     ws.append(headers)
 
     for r in data:
+
         ws.append([
-            r["id"],
-            r["vin"],
-            r["state"],
-            r["dealer_code"],
-            r["request_date"],
-            r["vahan_status"],
-            r["forwarded_to_lumax"],
-            r["forwarded_time"],
-            r["remarks"],
-            r["tagging_status"],
-            r["closure_date"]
+
+            r.get("id"),
+            r.get("vin"),
+            r.get("state"),
+            r.get("dealer_code"),
+            r.get("request_date"),
+            r.get("vahan_status"),
+            r.get("vahan_tagged_by"),
+            "Yes" if r.get("forwarded_to_lumax") else "No",
+            r.get("forwarded_time"),
+            r.get("remarks"),
+            r.get("tagging_status"),
+            r.get("backend_tagged_by"),
+            r.get("closure_date")
+
         ])
 
     wb.save(EXCEL_FILE)
 
 
-# ---------------- UI ----------------
-st.set_page_config(page_title="VLTD Tagging", layout="wide")
+# ---------------- APP ----------------
+
+st.set_page_config(
+    page_title="VLTD Tagging",
+    layout="wide"
+)
 
 st.title("VLTD Tagging Management")
+
+data = load_data()
 
 menu = st.sidebar.selectbox(
     "Menu",
@@ -74,186 +104,327 @@ menu = st.sidebar.selectbox(
         "Bulk Upload",
         "Vahan Status",
         "Backend Status",
-        "Download"
+        "Download Data"
     ]
 )
 
-data = load_data()
 
+# ---------------- ADD REQUEST ----------------
 
-# ---------------- Add Request ----------------
 if menu == "Add Request":
 
     st.subheader("Add Request")
 
-    with st.form("add_form"):
+    with st.form("add"):
 
         vin = st.text_input("VIN")
+
         state = st.text_input("State")
+
         dealer = st.text_input("Dealer Code")
 
-        submit = st.form_submit_button("Submit")
+        submit = st.form_submit_button(
+            "Add"
+        )
 
         if submit:
 
             data.append({
-                "id": len(data)+1,
+
+                "id": len(data) + 1,
+
                 "vin": vin,
+
                 "state": state,
+
                 "dealer_code": dealer,
-                "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M"),
-                "vahan_status": "Pending",
-                "forwarded_to_lumax": False,
-                "forwarded_time": None,
-                "remarks": "",
-                "tagging_status": None,
-                "closure_date": None
+
+                "request_date":
+                    datetime.now(
+                        IST
+                    ).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+
+                "vahan_status":
+                    "Pending",
+
+                "vahan_tagged_by":
+                    None,
+
+                "forwarded_to_lumax":
+                    False,
+
+                "forwarded_time":
+                    None,
+
+                "remarks":
+                    "",
+
+                "tagging_status":
+                    None,
+
+                "backend_tagged_by":
+                    None,
+
+                "closure_date":
+                    None
+
             })
 
             save_data(data)
 
-            st.success("Request Added")
+            st.success(
+                "Request Added"
+            )
 
 
-# ---------------- Bulk Upload ----------------
+# ---------------- BULK ----------------
+
 elif menu == "Bulk Upload":
 
     file = st.file_uploader(
-        "Upload Excel",
-        type=["xlsx", "csv"]
+        "Upload File",
+        type=[
+            "xlsx",
+            "csv"
+        ]
     )
 
     if file:
 
-        if file.name.endswith(".csv"):
+        if file.name.endswith(
+            ".csv"
+        ):
+
             df = pd.read_csv(file)
+
         else:
-            df = pd.read_excel(file)
+
+            df = pd.read_excel(
+                file
+            )
 
         st.dataframe(df)
 
-        if st.button("Confirm Upload"):
+        if st.button(
+            "Confirm Upload"
+        ):
 
             for _, row in df.iterrows():
 
                 data.append({
-                    "id": len(data)+1,
-                    "vin": row["VIN"],
-                    "state": row["State"],
-                    "dealer_code": row["Dealer Code"],
-                    "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M"),
-                    "vahan_status": "Pending",
-                    "forwarded_to_lumax": False,
-                    "forwarded_time": None,
-                    "remarks": "",
-                    "tagging_status": None,
-                    "closure_date": None
+
+                    "id":
+                        len(data)+1,
+
+                    "vin":
+                        row["VIN"],
+
+                    "state":
+                        row["State"],
+
+                    "dealer_code":
+                        row[
+                            "Dealer Code"
+                        ],
+
+                    "request_date":
+                        datetime.now(
+                            IST
+                        ).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        ),
+
+                    "vahan_status":
+                        "Pending",
+
+                    "vahan_tagged_by":
+                        None,
+
+                    "forwarded_to_lumax":
+                        False,
+
+                    "forwarded_time":
+                        None,
+
+                    "remarks":
+                        "",
+
+                    "tagging_status":
+                        None,
+
+                    "backend_tagged_by":
+                        None,
+
+                    "closure_date":
+                        None
+
                 })
 
             save_data(data)
 
-            st.success("Upload Completed")
+            st.success(
+                "Upload Complete"
+            )
 
 
-# ---------------- Vahan Status ----------------
+# ---------------- VAHAN ----------------
+
 elif menu == "Vahan Status":
 
-    st.subheader("Vahan Status")
+    st.subheader(
+        "Vahan Status"
+    )
 
     visible = [
+
         r for r in data
-        if not r.get("forwarded_to_lumax", False)
+
+        if not r.get(
+            "forwarded_to_lumax"
+        )
+
     ]
 
-    st.dataframe(pd.DataFrame(visible))
+    st.dataframe(
+        pd.DataFrame(
+            visible
+        )
+    )
 
-    req_id = st.number_input(
+    req = st.number_input(
         "Request ID",
         min_value=1,
-        step=1,
-        key="vahan"
+        step=1
     )
 
     status = st.selectbox(
         "Vahan Status",
-        ["Pending", "Done"]
+        [
+            "Pending",
+            "Done"
+        ]
     )
 
-    remarks = st.text_input("Remarks")
+    remarks = st.text_input(
+        "Remarks"
+    )
 
-    tagged_by = st.selectbox(
-        "Tagged By",
+    tagged = st.selectbox(
+        "Vahan Tagged By",
         [
             "Rajan",
             "Vishal",
             "Lumax Team"
-        ],
-        key="vahan_tag"
+        ]
     )
 
-    if st.button("Update Status"):
+    if st.button(
+        "Update Vahan"
+    ):
 
         for r in data:
 
-            if r["id"] == req_id:
+            if r["id"] == req:
 
-                r["vahan_status"] = status
-                r["remarks"] = remarks
-                r["tagged_by"] = tagged_by
+                r[
+                    "vahan_status"
+                ] = status
+
+                r[
+                    "remarks"
+                ] = remarks
+
+                r[
+                    "vahan_tagged_by"
+                ] = tagged
 
         save_data(data)
 
-        st.success("Vahan Status Updated")
+        st.success(
+            "Updated"
+        )
 
-    if st.button("Forward To Lumax"):
+    if st.button(
+        "Forward To Lumax"
+    ):
 
-        success = False
+        ok = False
 
         for r in data:
 
             if (
-                r["id"] == req_id
-                and r["vahan_status"] == "Done"
+
+                r["id"] == req
+
+                and
+
+                r[
+                    "vahan_status"
+                ]
+                ==
+                "Done"
+
             ):
 
-                r["forwarded_to_lumax"] = True
+                r[
+                    "forwarded_to_lumax"
+                ] = True
 
-                r["forwarded_time"] = (
-                    datetime.now(IST)
-                    .strftime("%Y-%m-%d %H:%M:%S")
+                r[
+                    "forwarded_time"
+                ] = datetime.now(
+                    IST
+                ).strftime(
+                    "%Y-%m-%d %H:%M:%S"
                 )
 
-                success = True
+                ok = True
 
         save_data(data)
 
-        if success:
-            st.success("Forwarded To Lumax")
+        if ok:
+
+            st.success(
+                "Forwarded"
+            )
+
         else:
-            st.error("Status must be Done")
+
+            st.error(
+                "Status must be Done"
+            )
 
 
-# ---------------- Backend ----------------
+# ---------------- BACKEND ----------------
+
 elif menu == "Backend Status":
 
-    st.subheader("Backend Status")
+    st.subheader(
+        "Backend Status"
+    )
 
     backend = [
 
         r for r in data
 
-        if r.get("forwarded_to_lumax")
+        if r.get(
+            "forwarded_to_lumax"
+        )
+
     ]
 
     st.dataframe(
-        pd.DataFrame(backend)
+        pd.DataFrame(
+            backend
+        )
     )
 
-    req_id = st.number_input(
+    req = st.number_input(
         "Request ID ",
         min_value=1,
-        step=1,
-        key="backend"
+        step=1
     )
 
     status = st.selectbox(
@@ -265,17 +436,16 @@ elif menu == "Backend Status":
     )
 
     remarks = st.text_input(
-        "Remarks"
+        "Backend Remarks"
     )
 
-    tagged_by = st.selectbox(
-        "Tagged By",
+    tagged = st.selectbox(
+        "Backend Tagged By",
         [
             "Rajan",
             "Vishal",
             "Lumax Team"
-        ],
-        key="backend_tag"
+        ]
     )
 
     if st.button(
@@ -284,19 +454,32 @@ elif menu == "Backend Status":
 
         for r in data:
 
-            if r["id"] == req_id:
+            if r["id"] == req:
 
-                r["tagging_status"] = status
-                r["remarks"] = remarks
-                r["tagged_by"] = tagged_by
+                r[
+                    "tagging_status"
+                ] = status
 
-                if status == "Completed":
+                r[
+                    "remarks"
+                ] = remarks
 
-                    r["closure_date"] = (
-                        datetime.now(IST)
-                        .strftime(
-                            "%Y-%m-%d %H:%M:%S"
-                        )
+                r[
+                    "backend_tagged_by"
+                ] = tagged
+
+                if (
+                    status
+                    ==
+                    "Completed"
+                ):
+
+                    r[
+                        "closure_date"
+                    ] = datetime.now(
+                        IST
+                    ).strftime(
+                        "%Y-%m-%d %H:%M:%S"
                     )
 
         save_data(data)
@@ -305,115 +488,32 @@ elif menu == "Backend Status":
             "Backend Updated"
         )
 
-# ---------------- Download ----------------
+
+# ---------------- DOWNLOAD ----------------
+
 elif menu == "Download Data":
 
     save_data(data)
 
-    if os.path.exists(EXCEL_FILE):
+    if os.path.exists(
+        EXCEL_FILE
+    ):
 
-        with open(EXCEL_FILE, "rb") as file:
+        with open(
+            EXCEL_FILE,
+            "rb"
+        ) as file:
 
             st.download_button(
-                label="⬇ Download Excel",
-                data=file,
-                file_name="VLTD Tagging data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+                "⬇ Download Excel",
+
+                file,
+
+                file_name=
+                "VLTD Tagging data.xlsx",
+
+                mime=
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
             )
-
-    else:
-
-        st.error("Excel file not found")
-            
-            # ---------------- Output File ----------------
-
-EXCEL_FILE = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx"
-
-# ---------------- Save Data ----------------
-
-def save_data(data):
-
-```
-with open(DATA_FILE, "w") as f:
-    json.dump(
-        data,
-        f,
-        indent=4,
-        default=str
-    )
-
-wb = openpyxl.Workbook()
-
-ws = wb.active
-
-ws.title = "VLTD Tagging"
-
-headers = [
-
-    "ID",
-    "VIN",
-    "State",
-    "Dealer Code",
-    "Request Date",
-    "Vahan Status",
-    "Vahan tagged by",
-    "Forwarded to Lumax",
-    "Forwarded Time",
-    "Remarks",
-    "Tagging Status",
-    "Statebackend tagged by",
-    "Closure Date"
-
-]
-
-ws.append(headers)
-
-for r in data:
-
-    ws.append([
-
-        r.get("id"),
-
-        r.get("vin"),
-
-        r.get("state"),
-
-        r.get("dealer_code"),
-
-        r.get("request_date"),
-
-        r.get("vahan_status"),
-
-        r.get("vahan_tagged_by"),
-
-        "Yes"
-        if r.get(
-            "forwarded_to_lumax"
-        )
-        else "No",
-
-        r.get(
-            "forwarded_time"
-        ),
-
-        r.get(
-            "remarks"
-        ),
-
-        r.get(
-            "tagging_status"
-        ),
-
-        r.get(
-            "backend_tagged_by"
-        ),
-
-        r.get(
-            "closure_date"
-        )
-
-    ])
-
-wb.save(EXCEL_FILE)
-```
-
