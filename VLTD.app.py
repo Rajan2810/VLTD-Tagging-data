@@ -1,232 +1,555 @@
 import streamlit as st
-from datetime import datetime
-import json, os, uuid
+from flask import Flask, render_template, request, redirect, url_for
+from flask import send_file, flash
+
+import pymysql
 import pandas as pd
 import openpyxl
 import pytz
 
+from datetime import datetime
+import os
+import json
+
 app = Flask(__name__)
-app.secret_key = "secret"  # for flash messages
+app.secret_key = "secret"
 
-DATA_FILE = "tagging_requests.json"
-EXCEL_FILE = "tagging_requests.xlsx"
-TMP_FOLDER = os.path.abspath("tmp")  # absolute path for temp files
-SAMPLE_FILE = os.path.abspath("static/sample_bulk_upload.xlsx")
-IST = pytz.timezone('Asia/Kolkata')
+DATA_FILE = "tracking.json"
+EXCEL_FILE = "tracking.xlsx"
 
-os.makedirs(TMP_FOLDER, exist_ok=True)
+IST = pytz.timezone("Asia/Kolkata")
 
 
-# ---------------- Utility Functions ----------------
+# ================= DATABASE =================
+
+DB = pymysql.connect(
+    host="YOUR_HOST",
+    user="YOUR_USER",
+    password="YOUR_PASSWORD",
+    database="taisys_connect",
+    cursorclass=pymysql.cursors.DictCursor
+)
+
+
+# ================= FILE =================
+
 def load_data():
+
     if os.path.exists(DATA_FILE):
+
         with open(DATA_FILE, "r") as f:
             return json.load(f)
+
     return []
 
 
 def save_data(data):
+
     with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4, default=str)
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Tagging Requests"
+        json.dump(
+            data,
+            f,
+            indent=4
+        )
 
-    headers = [
-        "ID", "VIN", "State", "Dealer Code", "Request Date",
-        "Vahan Status", "Forwarded to Lumax", "Forwarded Time",
-        "Remarks", "Tagging Status", "Closure Date"
-    ]
-    ws.append(headers)
-
-    for r in data:
-        ws.append([
-            r.get("id"),
-            r.get("vin"),
-            r.get("state"),
-            r.get("dealer_code"),
-            r.get("request_date"),
-            r.get("vahan_status"),
-            "Yes" if r.get("forwarded_to_lumax") else "No",
-            r.get("forwarded_time"),
-            r.get("remarks"),
-            r.get("tagging_status"),
-            r.get("closure_date"),
-        ])
-
-    wb.save(EXCEL_FILE)
+    pd.DataFrame(
+        data
+    ).to_excel(
+        EXCEL_FILE,
+        index=False
+    )
 
 
-# ---------------- Page 1: Add Request ----------------
-@app.route('/')
-def index():
-    return render_template('add_request.html')
+# ================= SQL SEARCH =================
+
+def search_vin(vin):
+
+    sql = """
+
+WITH ranked_messages AS (
+
+SELECT
+m.*,
+
+ROW_NUMBER() OVER(
+PARTITION BY m.esim_id
+ORDER BY id DESC
+) rn
+
+FROM esim_lifecycle m
+),
+
+ranked_lifecycle AS (
+
+SELECT *
+
+FROM ranked_messages
+
+WHERE rn=1
+
+)
+
+SELECT
+
+ar.request_id,
+
+DATE_FORMAT(
+ar.request_date,
+'%d/%m/%Y'
+) request_date,
+
+dl.contact_person dealer_name,
+
+ar.state,
+
+d.esn unique_device_code,
+
+d.imei,
+
+e.primary_iccid iccid,
+
+DATE_FORMAT(
+d.created_on,
+'%m/%Y'
+) manuf_month,
+
+v.vin,
+
+v.engine_number,
+
+RIGHT(
+v.engine_number,
+5
+) engine_last_5
+
+FROM esim e
+
+LEFT JOIN ranked_lifecycle el
+ON el.esim_id=e.id
+
+LEFT JOIN device d
+ON d.esim_id=e.id
+
+LEFT JOIN dealer dl
+ON dl.id=d.dealer_id
+
+LEFT JOIN vehicle v
+ON v.device_id=d.id
+
+LEFT JOIN activation_vin av
+ON av.vin=v.vin
+
+LEFT JOIN activation_request ar
+ON ar.id=av.activation_request_id
+
+WHERE
+el.rn=1
+AND
+v.vin=%s
+
+LIMIT 1
+
+"""
+
+    cur = DB.cursor()
+
+    cur.execute(
+        sql,
+        (vin,)
+    )
+
+    return cur.fetchone()
 
 
-@app.route('/add', methods=['POST'])
-def add():
-    requests = load_data()
-    new_request = {
-        "id": len(requests) + 1,
-        "vin": request.form['vin'],
-        "state": request.form['state'],
-        "dealer_code": request.form['dealer_code'],
-        "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
+# ================= PAGE 1 =================
+
+@app.route(
+"/",
+methods=[
+"GET",
+"POST"
+]
+)
+
+def home():
+
+    output = None
+
+    error = None
+
+    record = None
+
+    if request.method == "POST":
+
+        vin = request.form["vin"]
+
+        record = search_vin(vin)
+
+        if not record:
+
+            error = "VIN NOT MAPPED"
+
+        else:
+
+            output = (
+                f"LIT1|"
+                f"{record['unique_device_code']}|"
+                f"{record['imei']}|"
+                f"{record['iccid']}|"
+                f"{record['manuf_month']}|"
+                f"214"
+            )
+
+        return render_template(
+            "home.html",
+            output=output,
+            record=record,
+            error=error
+        )
+
+    return render_template(
+        "home.html"
+    )
+
+
+@app.route(
+"/submit",
+methods=["POST"]
+)
+
+def submit():
+
+    data = load_data()
+
+    vin = request.form["vin"]
+
+    state = request.form["state"]
+
+    sql = search_vin(vin)
+
+    obj = {
+
+        "id": len(data) + 1,
+
+        "vin": vin,
+
+        "state": state,
+
+        "unique_device":
+
+        sql[
+            "unique_device_code"
+        ],
+
+        "imei":
+
+        sql[
+            "imei"
+        ],
+
+        "iccid":
+
+        sql[
+            "iccid"
+        ],
+
+        "mfg":
+
+        sql[
+            "manuf_month"
+        ],
+
+        "request_date":
+
+        datetime.now(
+            IST
+        ).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        ),
+
+        "tagged_by": "",
+
         "vahan_status": "Pending",
-        "forwarded_to_lumax": False,
-        "forwarded_time": None,
-        "tagging_status": None,
-        "closure_date": None,
-        "remarks": None
+
+        "remarks": "",
+
+        "forwarded": False,
+
+        "forward_time": "",
+
+        "backend_status": "",
+
+        "closure_date": ""
+
     }
-    requests.append(new_request)
-    save_data(requests)
-    flash("Request added successfully.", "success")
-    return redirect(url_for('index'))
 
+    data.append(obj)
 
-# ---------------- Bulk Upload ----------------
-@app.route("/bulk_upload", methods=["POST"])
-def bulk_upload():
-    file = request.files.get("file")
-    if not file or file.filename == "":
-        flash("No file selected.", "danger")
-        return redirect(url_for("index"))
-
-    tmp_filename = os.path.join(TMP_FOLDER, f"{uuid.uuid4().hex}_{file.filename}")
-    file.save(tmp_filename)
-
-    # Read into pandas for preview
-    if tmp_filename.endswith(".csv"):
-        df = pd.read_csv(tmp_filename)
-    else:
-        df = pd.read_excel(tmp_filename)
-
-    required_cols = ["VIN", "State", "Dealer Code"]
-    if not all(col in df.columns for col in required_cols):
-        flash(f"File must contain columns: {', '.join(required_cols)}", "danger")
-        os.remove(tmp_filename)
-        return redirect(url_for("index"))
-
-    preview_html = df.to_html(classes="table table-bordered table-sm table-striped", index=False)
-    return render_template("preview.html", table=preview_html, tmp_filename=tmp_filename)
-
-
-@app.route("/confirm_upload", methods=["POST"])
-def confirm_upload():
-    tmp_filename = request.form.get("tmp_filename")
-    if not tmp_filename or not os.path.exists(tmp_filename):
-        flash("Temporary file not found. Please upload again.", "danger")
-        return redirect(url_for("index"))
-
-    if tmp_filename.endswith(".csv"):
-        df = pd.read_csv(tmp_filename)
-    else:
-        df = pd.read_excel(tmp_filename)
-
-    requests = load_data()
-    for _, row in df.iterrows():
-        new_request = {
-            "id": len(requests) + 1,
-            "vin": row["VIN"],
-            "state": row["State"],
-            "dealer_code": row["Dealer Code"],
-            "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
-            "vahan_status": "Pending",
-            "forwarded_to_lumax": False,
-            "forwarded_time": None,
-            "tagging_status": None,
-            "closure_date": None,
-            "remarks": None
-        }
-        requests.append(new_request)
-
-    save_data(requests)
-    os.remove(tmp_filename)
-    flash("Bulk upload successful.", "success")
-    return redirect(url_for("index"))
-
-
-# ---------------- Page 2: Vahan Status ----------------
-@app.route('/vahan', methods=['GET', 'POST'])
-def vahan_status():
-    data = load_data()
-
-    if request.method == "POST":
-        req_id = int(request.form.get("id"))
-        for r in data:
-            if r["id"] == req_id:
-                r["vahan_status"] = request.form.get("vahan_status")
-                r["remarks"] = request.form.get("remarks")
-        save_data(data)
-        flash("Vahan status updated.", "success")
-        return redirect(url_for("vahan_status"))
-
-    visible_requests = [
-        r for r in data
-        if r["vahan_status"] in ["Pending", "Done"] and not r.get("forwarded_to_lumax", False)
-    ]
-    return render_template("vahan_status.html", requests=visible_requests)
-
-
-# ---------------- Forward to Lumax ----------------
-@app.route('/forward/<int:request_id>')
-def forward_to_lumax(request_id):
-    data = load_data()
-    for r in data:
-        if r["id"] == request_id and r["vahan_status"] == "Done":
-            r["forwarded_to_lumax"] = True
-            r["forwarded_time"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-            flash("Forwarded to Lumax.", "success")
     save_data(data)
-    return redirect(url_for("vahan_status"))
+
+    return redirect(
+        url_for(
+            "vahan"
+        )
+    )
 
 
-# ---------------- Page 3: Backend / Tagging Status ----------------
-@app.route('/backend', methods=['GET', 'POST'])
-def backend_status():
+# ================= PAGE 2 =================
+
+@app.route(
+"/vahan",
+methods=[
+"GET",
+"POST"
+]
+)
+
+def vahan():
+
     data = load_data()
 
     if request.method == "POST":
-        req_id = int(request.form.get("id"))
+
+        rid = int(
+            request.form["id"]
+        )
+
         for r in data:
-            if r["id"] == req_id:
-                r['tagging_status'] = request.form.get('tagging_status')
-                if r['tagging_status'] == "Pending":
-                    r['remarks'] = request.form.get('remarks')
-                elif r['tagging_status'] == "Completed":
-                    r['closure_date'] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+
+            if r["id"] == rid:
+
+                r[
+                    "tagged_by"
+                ] = request.form[
+                    "tagged_by"
+                ]
+
+                r[
+                    "vahan_status"
+                ] = request.form[
+                    "status"
+                ]
+
+                if (
+                    r[
+                        "vahan_status"
+                    ]
+                    ==
+                    "Pending"
+                ):
+
+                    r[
+                        "remarks"
+                    ] = request.form[
+                        "remarks"
+                    ]
+
+                else:
+
+                    r[
+                        "vahan_complete"
+                    ] = (
+                        datetime.now(
+                            IST
+                        ).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+                    )
+
         save_data(data)
-        flash("Backend status updated.", "success")
-        return redirect(url_for("backend_status"))
 
-    visible_requests = [
-        r for r in data
-        if r.get('forwarded_to_lumax') and (r.get('tagging_status') == "Pending" or r.get('tagging_status') is None)
+        flash(
+            "Updated"
+        )
+
+        return redirect(
+            "/vahan"
+        )
+
+    return render_template(
+        "vahan.html",
+        data=data
+    )
+
+
+# ================= FORWARD =================
+
+@app.route(
+"/forward/<int:id>"
+)
+
+def forward(id):
+
+    data = load_data()
+
+    for r in data:
+
+        if (
+
+            r["id"]
+
+            ==
+
+            id
+
+            and
+
+            r[
+                "vahan_status"
+            ]
+
+            ==
+
+            "Completed"
+
+        ):
+
+            r[
+                "forwarded"
+            ] = True
+
+            r[
+                "forward_time"
+            ] = (
+
+                datetime.now(
+                    IST
+                )
+
+                .strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+
+            )
+
+    save_data(data)
+
+    return redirect(
+        "/backend"
+    )
+
+
+# ================= PAGE 3 =================
+
+@app.route(
+"/backend",
+methods=[
+"GET",
+"POST"
+]
+)
+
+def backend():
+
+    data = load_data()
+
+    if request.method == "POST":
+
+        rid = int(
+            request.form["id"]
+        )
+
+        for r in data:
+
+            if r["id"] == rid:
+
+                r[
+                    "backend_status"
+                ] = request.form[
+                    "status"
+                ]
+
+                r[
+                    "tagged_by"
+                ] = request.form[
+                    "tagged_by"
+                ]
+
+                if (
+
+                    r[
+                        "backend_status"
+                    ]
+
+                    ==
+
+                    "Pending"
+
+                ):
+
+                    r[
+                        "remarks"
+                    ] = request.form[
+                        "remarks"
+                    ]
+
+                else:
+
+                    r[
+                        "closure_date"
+                    ] = (
+
+                        datetime.now(
+                            IST
+                        )
+
+                        .strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
+
+                    )
+
+        save_data(data)
+
+        flash(
+            "Completed"
+        )
+
+        return redirect(
+            "/backend"
+        )
+
+    data = [
+
+        x
+
+        for x
+
+        in data
+
+        if x[
+            "forwarded"
+        ]
+
     ]
-    return render_template('backend_status.html', requests=visible_requests)
+
+    return render_template(
+        "backend.html",
+        data=data
+    )
 
 
-# ---------------- Download Excel ----------------
-@app.route('/download')
+# ================= DOWNLOAD =================
+
+@app.route(
+"/download"
+)
+
 def download():
-    if os.path.exists(EXCEL_FILE):
-        return send_file(EXCEL_FILE, as_attachment=True)
-    flash("Excel file not found.", "danger")
-    return redirect(url_for("index"))
+
+    return send_file(
+        EXCEL_FILE,
+        as_attachment=True
+    )
 
 
-# ---------------- Sample Format Download ----------------
-@app.route("/sample_format")
-def sample_format():
-    if os.path.exists(SAMPLE_FILE):
-        return send_file(SAMPLE_FILE, as_attachment=True)
-    flash("Sample file not found.", "danger")
-    return redirect(url_for("index"))
+# ================= RUN =================
 
+if __name__ == "__main__":
 
-# ---------------- Run App ----------------
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080, debug=True)
-    
+    app.run(
+        host="0.0.0.0",
+        port=8080,
+        debug=True
+    )
