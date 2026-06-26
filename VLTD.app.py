@@ -69,77 +69,44 @@ def save_data(data):
 
 def search_vin(vin):
 
+    conn = get_connection()
+
+    if conn is None:
+        return None
+
+    cur = conn.cursor()
+
     sql = """
 
-WITH ranked_messages AS (
-
-SELECT
-m.*,
-
-ROW_NUMBER() OVER(
-PARTITION BY m.esim_id
-ORDER BY id DESC
-) rn
-
-FROM esim_lifecycle m
-),
-
-ranked_lifecycle AS (
-
-SELECT *
-
-FROM ranked_messages
-
-WHERE rn=1
-
-)
-
 SELECT
 
-ar.request_id,
+v.vin,
 
-DATE_FORMAT(
-ar.request_date,
-'%d/%m/%Y'
-) request_date,
-
-dl.contact_person dealer_name,
-
-ar.state,
-
-d.esn unique_device_code,
+d.esn AS unique_device_code,
 
 d.imei,
 
-e.primary_iccid iccid,
+e.primary_iccid AS iccid,
 
 DATE_FORMAT(
 d.created_on,
 '%m/%Y'
 ) manuf_month,
 
-v.vin,
+ar.state,
 
-v.engine_number,
+dl.contact_person
 
-RIGHT(
-v.engine_number,
-5
-) engine_last_5
-
-FROM esim e
-
-LEFT JOIN ranked_lifecycle el
-ON el.esim_id=e.id
+FROM vehicle v
 
 LEFT JOIN device d
+ON v.device_id=d.id
+
+LEFT JOIN esim e
 ON d.esim_id=e.id
 
 LEFT JOIN dealer dl
 ON dl.id=d.dealer_id
-
-LEFT JOIN vehicle v
-ON v.device_id=d.id
 
 LEFT JOIN activation_vin av
 ON av.vin=v.vin
@@ -147,24 +114,22 @@ ON av.vin=v.vin
 LEFT JOIN activation_request ar
 ON ar.id=av.activation_request_id
 
-WHERE
-el.rn=1
-AND
-v.vin=%s
+WHERE v.vin=%s
 
 LIMIT 1
 
 """
 
-    cur = DB.cursor()
-
     cur.execute(
         sql,
-        (vin,)
+        (vin.strip(),)
     )
 
-    return cur.fetchone()
+    result = cur.fetchone()
 
+    conn.close()
+
+    return result
 
 def load_data():
 
