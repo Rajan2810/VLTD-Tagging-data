@@ -4,3 +4,4 @@ openpyxl
 pytz
 gunicorn
 filelock
+pymysql
