@@ -312,32 +312,19 @@ save_data(data)
 
 if os.path.exists(EXCEL_FILE):
 
-    with open(
-        EXCEL_FILE,
-        "rb"
-    ) as file:
+    with open(EXCEL_FILE, "rb") as file:
 
         st.download_button(
-
             label="⬇ Download Excel",
-
             data=file,
-
             file_name="VLTD Tagging data.xlsx",
-
-            mime=(
-                "application/"
-                "vnd.openxmlformats-officedocument"
-                ".spreadsheetml.sheet"
-            )
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
 
 else:
 
-    st.error(
-        "Excel file not found"
-    )
-            )
+    st.error("Excel file not found")
+            
             # ---------------- Output File ----------------
 
 EXCEL_FILE = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx"
