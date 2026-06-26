@@ -158,64 +158,152 @@ elif menu == "Bulk Upload":
 # ---------------- Vahan Status ----------------
 elif menu == "Vahan Status":
 
-    st.subheader("Update Vahan")
+    st.subheader("Vahan Status")
 
-    df = pd.DataFrame(data)
+    visible = [
+        r for r in data
+        if not r.get("forwarded_to_lumax", False)
+    ]
 
-    st.dataframe(df)
+    st.dataframe(pd.DataFrame(visible))
 
-    req = st.number_input("Request ID", 1)
+    req_id = st.number_input(
+        "Request ID",
+        min_value=1,
+        step=1,
+        key="vahan"
+    )
 
     status = st.selectbox(
-        "Status",
+        "Vahan Status",
         ["Pending", "Done"]
     )
 
     remarks = st.text_input("Remarks")
 
-    if st.button("Update"):
+    tagged_by = st.selectbox(
+        "Tagged By",
+        [
+            "Rajan",
+            "Vishal",
+            "Lumax Team"
+        ],
+        key="vahan_tag"
+    )
+
+    if st.button("Update Status"):
 
         for r in data:
 
-            if r["id"] == req:
+            if r["id"] == req_id:
 
                 r["vahan_status"] = status
                 r["remarks"] = remarks
+                r["tagged_by"] = tagged_by
 
         save_data(data)
 
-        st.success("Updated")
+        st.success("Vahan Status Updated")
+
+    if st.button("Forward To Lumax"):
+
+        success = False
+
+        for r in data:
+
+            if (
+                r["id"] == req_id
+                and r["vahan_status"] == "Done"
+            ):
+
+                r["forwarded_to_lumax"] = True
+
+                r["forwarded_time"] = (
+                    datetime.now(IST)
+                    .strftime("%Y-%m-%d %H:%M:%S")
+                )
+
+                success = True
+
+        save_data(data)
+
+        if success:
+            st.success("Forwarded To Lumax")
+        else:
+            st.error("Status must be Done")
 
 
 # ---------------- Backend ----------------
 elif menu == "Backend Status":
 
-    req = st.number_input("Request ID")
+    st.subheader("Backend Status")
 
-    status = st.selectbox(
-        "Tagging",
-        ["Pending", "Completed"]
+    backend = [
+
+        r for r in data
+
+        if r.get("forwarded_to_lumax")
+    ]
+
+    st.dataframe(
+        pd.DataFrame(backend)
     )
 
-    if st.button("Save"):
+    req_id = st.number_input(
+        "Request ID ",
+        min_value=1,
+        step=1,
+        key="backend"
+    )
+
+    status = st.selectbox(
+        "Tagging Status",
+        [
+            "Pending",
+            "Completed"
+        ]
+    )
+
+    remarks = st.text_input(
+        "Remarks"
+    )
+
+    tagged_by = st.selectbox(
+        "Tagged By",
+        [
+            "Rajan",
+            "Vishal",
+            "Lumax Team"
+        ],
+        key="backend_tag"
+    )
+
+    if st.button(
+        "Save Backend"
+    ):
 
         for r in data:
 
-            if r["id"] == req:
+            if r["id"] == req_id:
 
                 r["tagging_status"] = status
+                r["remarks"] = remarks
+                r["tagged_by"] = tagged_by
 
                 if status == "Completed":
 
                     r["closure_date"] = (
                         datetime.now(IST)
-                        .strftime("%Y-%m-%d %H:%M")
+                        .strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     )
 
         save_data(data)
 
-        st.success("Saved")
-
+        st.success(
+            "Backend Updated"
+        )
 
 # ---------------- Download ----------------
 elif menu == "Download":
