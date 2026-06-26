@@ -460,7 +460,58 @@ elif menu == "Backend Status":
 
         save_data(data)
         st.success("Backend Updated")
+# ================= EDIT REQUEST =================
 
+elif menu == "Edit Request":
+
+    st.subheader("✏ Edit Request")
+
+    if not data:
+        st.warning("No records available")
+        st.stop()
+
+    ids = [r["id"] for r in data]
+
+    selected = st.selectbox(
+        "Select Request ID",
+        ids
+    )
+
+    record = next(
+        x for x in data
+        if x["id"] == selected
+    )
+
+    vin = st.text_input(
+        "VIN",
+        record["vin"]
+    )
+
+    state = st.text_input(
+        "State",
+        record["state"]
+    )
+
+    dealer = st.text_input(
+        "Dealer Code",
+        record["dealer_code"]
+    )
+
+    remarks = st.text_input(
+        "Remarks",
+        record.get("remarks", "")
+    )
+
+    if st.button("Update Record"):
+
+        record["vin"] = vin
+        record["state"] = state
+        record["dealer_code"] = dealer
+        record["remarks"] = remarks
+
+        save_data(data)
+
+        st.success("Record Updated Successfully")
 
 # ================= DOWNLOAD =================
 
