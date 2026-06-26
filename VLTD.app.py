@@ -23,10 +23,10 @@ IST = pytz.timezone("Asia/Kolkata")
 # ================= DATABASE =================
 
 DB = pymysql.connect(
-    host="YOUR_HOST",
-    user="YOUR_USER",
+    host="esimproddb.taisys.in",
+    user="iconnect_user",
     password="YOUR_PASSWORD",
-    database="taisys_connect",
+    database="kG7TwbkkSGZd86mX",
     cursorclass=pymysql.cursors.DictCursor
 )
 
