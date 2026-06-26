@@ -1,355 +1,231 @@
 import streamlit as st
 import pandas as pd
-import pymysql
-import pytz
+import openpyxl
 import json
 import os
 from datetime import datetime
+import pytz
 
-
-# ================= CONFIG =================
-
+# ---------------- Config ----------------
 DATA_FILE = "tagging_requests.json"
 EXCEL_FILE = "tagging_requests.xlsx"
-
 IST = pytz.timezone("Asia/Kolkata")
 
 
-# ================= DATABASE =================
-
-def get_connection():
-
-    try:
-
-        conn = pymysql.connect(
-            host="esimproddb.taisys.in",
-            user="iconnect_user",
-            password="kG7TwbkkSGZd86mX",   # Replace
-            database="taisys_connect",
-            port=3306,
-            connect_timeout=20,
-            cursorclass=pymysql.cursors.DictCursor
-        )
-
-        return conn
-
-    except Exception as e:
-
-        st.error(f"DB Error: {e}")
-
-        return None
-
-
-# ================= SEARCH VIN =================
-
-def search_vin(vin):
-
-    conn = get_connection()
-
-    if conn is None:
-        return None
-
-    try:
-
-        cur = conn.cursor()
-
-        sql = """
-
-SELECT
-
-v.vin,
-
-d.esn AS unique_device_code,
-
-d.imei,
-
-e.primary_iccid AS iccid,
-
-DATE_FORMAT(
-d.created_on,
-'%m/%Y'
-) manuf_month,
-
-ar.state,
-
-dl.contact_person
-
-FROM vehicle v
-
-LEFT JOIN device d
-ON d.id=v.device_id
-
-LEFT JOIN esim e
-ON e.id=d.esim_id
-
-LEFT JOIN dealer dl
-ON dl.id=d.dealer_id
-
-LEFT JOIN activation_vin av
-ON av.vin=v.vin
-
-LEFT JOIN activation_request ar
-ON ar.id=av.activation_request_id
-
-WHERE
-TRIM(v.vin)=TRIM(%s)
-
-LIMIT 1
-
-"""
-
-        cur.execute(
-            sql,
-            (vin,)
-        )
-
-        result = cur.fetchone()
-
-        return result
-
-    except Exception as e:
-
-        st.error(
-            f"Search Error: {e}"
-        )
-
-        return None
-
-    finally:
-
-        conn.close()
-
-
-# ================= FILE =================
-
+# ---------------- Functions ----------------
 def load_data():
-
     if os.path.exists(DATA_FILE):
-
-        with open(
-            DATA_FILE,
-            "r"
-        ) as f:
-
+        with open(DATA_FILE, "r") as f:
             return json.load(f)
-
     return []
 
 
 def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
-    with open(
-        DATA_FILE,
-        "w"
-    ) as f:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Tagging Requests"
 
-        json.dump(
-            data,
-            f,
-            indent=4
-        )
+    headers = [
+        "ID",
+        "VIN",
+        "State",
+        "Dealer Code",
+        "Request Date",
+        "Vahan Status",
+        "Forwarded",
+        "Forwarded Time",
+        "Remarks",
+        "Tagging Status",
+        "Closure Date"
+    ]
 
-    pd.DataFrame(
-        data
-    ).to_excel(
-        EXCEL_FILE,
-        index=False
+    ws.append(headers)
+
+    for r in data:
+        ws.append([
+            r["id"],
+            r["vin"],
+            r["state"],
+            r["dealer_code"],
+            r["request_date"],
+            r["vahan_status"],
+            r["forwarded_to_lumax"],
+            r["forwarded_time"],
+            r["remarks"],
+            r["tagging_status"],
+            r["closure_date"]
+        ])
+
+    wb.save(EXCEL_FILE)
+
+
+# ---------------- UI ----------------
+st.set_page_config(page_title="VLTD Tagging", layout="wide")
+
+st.title("VLTD Tagging Management")
+
+menu = st.sidebar.selectbox(
+    "Menu",
+    [
+        "Add Request",
+        "Bulk Upload",
+        "Vahan Status",
+        "Backend Status",
+        "Download"
+    ]
+)
+
+data = load_data()
+
+
+# ---------------- Add Request ----------------
+if menu == "Add Request":
+
+    st.subheader("Add Request")
+
+    with st.form("add_form"):
+
+        vin = st.text_input("VIN")
+        state = st.text_input("State")
+        dealer = st.text_input("Dealer Code")
+
+        submit = st.form_submit_button("Submit")
+
+        if submit:
+
+            data.append({
+                "id": len(data)+1,
+                "vin": vin,
+                "state": state,
+                "dealer_code": dealer,
+                "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M"),
+                "vahan_status": "Pending",
+                "forwarded_to_lumax": False,
+                "forwarded_time": None,
+                "remarks": "",
+                "tagging_status": None,
+                "closure_date": None
+            })
+
+            save_data(data)
+
+            st.success("Request Added")
+
+
+# ---------------- Bulk Upload ----------------
+elif menu == "Bulk Upload":
+
+    file = st.file_uploader(
+        "Upload Excel",
+        type=["xlsx", "csv"]
     )
 
+    if file:
 
-# ================= UI =================
-
-st.set_page_config(
-    page_title="VLTD Tracking",
-    layout="wide"
-)
-
-st.title(
-    "VLTD Tagging Data Tracking"
-)
-
-vin = st.text_input(
-    "Enter VIN"
-)
-
-
-if st.button(
-    "Search"
-):
-
-    if not vin:
-
-        st.warning(
-            "Enter VIN"
-        )
-
-    else:
-
-        record = search_vin(vin)
-
-        if record is None:
-
-            st.error(
-                "VIN NOT MAPPED"
-            )
-
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
         else:
+            df = pd.read_excel(file)
 
-            st.success(
-                "VIN FOUND"
-            )
+        st.dataframe(df)
 
-            output = (
+        if st.button("Confirm Upload"):
 
-                "LIT1|"
-
-                f"{record['unique_device_code']}|"
-
-                f"{record['imei']}|"
-
-                f"{record['iccid']}|"
-
-                f"{record['manuf_month']}|"
-
-                "214"
-
-            )
-
-            st.subheader(
-                "Output"
-            )
-
-            st.code(
-                output
-            )
-
-            c1, c2 = st.columns(2)
-
-            with c1:
-
-                st.write(
-                    "Dealer",
-                    record.get(
-                        "contact_person",
-                        "-"
-                    )
-                )
-
-            with c2:
-
-                st.write(
-                    "State",
-                    record.get(
-                        "state",
-                        "-"
-                    )
-                )
-
-            state = st.selectbox(
-
-                "Select State",
-
-                [
-
-                    "Haryana",
-
-                    "Rajasthan",
-
-                    "UP",
-
-                    "Delhi",
-
-                    "Punjab"
-
-                ]
-
-            )
-
-            if st.button(
-                "Submit"
-            ):
-
-                data = load_data()
+            for _, row in df.iterrows():
 
                 data.append({
-
-                    "VIN":
-                    record["vin"],
-
-                    "Unique Device":
-
-                    record[
-                        "unique_device_code"
-                    ],
-
-                    "IMEI":
-
-                    record[
-                        "imei"
-                    ],
-
-                    "ICCID":
-
-                    record[
-                        "iccid"
-                    ],
-
-                    "MFG":
-
-                    record[
-                        "manuf_month"
-                    ],
-
-                    "Selected State":
-
-                    state,
-
-                    "Request Date":
-
-                    datetime.now(
-                        IST
-                    ).strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    ),
-
-                    "Vahan Status":
-
-                    "Pending"
-
+                    "id": len(data)+1,
+                    "vin": row["VIN"],
+                    "state": row["State"],
+                    "dealer_code": row["Dealer Code"],
+                    "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M"),
+                    "vahan_status": "Pending",
+                    "forwarded_to_lumax": False,
+                    "forwarded_time": None,
+                    "remarks": "",
+                    "tagging_status": None,
+                    "closure_date": None
                 })
 
-                save_data(
-                    data
-                )
+            save_data(data)
 
-                st.success(
-                    "Request Saved"
-                )
+            st.success("Upload Completed")
 
-                st.dataframe(
-                    pd.DataFrame(
-                        data
+
+# ---------------- Vahan Status ----------------
+elif menu == "Vahan Status":
+
+    st.subheader("Update Vahan")
+
+    df = pd.DataFrame(data)
+
+    st.dataframe(df)
+
+    req = st.number_input("Request ID", 1)
+
+    status = st.selectbox(
+        "Status",
+        ["Pending", "Done"]
+    )
+
+    remarks = st.text_input("Remarks")
+
+    if st.button("Update"):
+
+        for r in data:
+
+            if r["id"] == req:
+
+                r["vahan_status"] = status
+                r["remarks"] = remarks
+
+        save_data(data)
+
+        st.success("Updated")
+
+
+# ---------------- Backend ----------------
+elif menu == "Backend Status":
+
+    req = st.number_input("Request ID")
+
+    status = st.selectbox(
+        "Tagging",
+        ["Pending", "Completed"]
+    )
+
+    if st.button("Save"):
+
+        for r in data:
+
+            if r["id"] == req:
+
+                r["tagging_status"] = status
+
+                if status == "Completed":
+
+                    r["closure_date"] = (
+                        datetime.now(IST)
+                        .strftime("%Y-%m-%d %H:%M")
                     )
-                )
+
+        save_data(data)
+
+        st.success("Saved")
 
 
-# ================= DOWNLOAD =================
+# ---------------- Download ----------------
+elif menu == "Download":
 
-if os.path.exists(
-    EXCEL_FILE
-):
+    if os.path.exists(EXCEL_FILE):
 
-    with open(
-        EXCEL_FILE,
-        "rb"
-    ) as f:
+        with open(EXCEL_FILE, "rb") as f:
 
-        st.download_button(
-
-            "Download Excel",
-
-            f,
-
-            file_name=
-            EXCEL_FILE
-        )
+            st.download_button(
+                "Download Excel",
+                f,
+                file_name="tagging_requests.xlsx"
+            )
