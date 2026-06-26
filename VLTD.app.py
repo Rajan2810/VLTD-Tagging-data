@@ -32,11 +32,9 @@ def load_data():
 
 def save_data(data):
 
-    # SAVE JSON
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-    # SAVE EXCEL
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "VLTD Tagging"
@@ -79,7 +77,7 @@ def save_data(data):
     wb.save(EXCEL_FILE)
 
 
-# ================= APP UI =================
+# ================= UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
 
@@ -98,11 +96,13 @@ menu = st.sidebar.selectbox(
         "Download Data"
     ]
 )
+
+
 # ================= DASHBOARD =================
 
-elif menu == "Dashboard":
+if menu == "Dashboard":
 
-    st.subheader("📊 Status Dashboard")
+    st.subheader("📊 Dashboard")
 
     df = pd.DataFrame(data)
 
@@ -110,22 +110,15 @@ elif menu == "Dashboard":
         st.warning("No data available")
         st.stop()
 
-    # ---------------- DATE FILTER ----------------
-    st.subheader("Filter by Date")
-
-    date_col = "request_date"
-
-    df[date_col] = pd.to_datetime(df[date_col])
+    df["request_date"] = pd.to_datetime(df["request_date"])
 
     start_date = st.date_input("Start Date")
     end_date = st.date_input("End Date")
 
     filtered_df = df[
-        (df[date_col].dt.date >= start_date) &
-        (df[date_col].dt.date <= end_date)
+        (df["request_date"].dt.date >= start_date) &
+        (df["request_date"].dt.date <= end_date)
     ]
-
-    # ---------------- KPIs ----------------
 
     total_requests = len(filtered_df)
 
@@ -140,12 +133,8 @@ elif menu == "Dashboard":
     col1, col2, col3 = st.columns(3)
 
     col1.metric("Total Requests", total_requests)
-
-    col2.metric("Vahan Tagged (Done)", total_vahan_done)
-
+    col2.metric("Vahan Done", total_vahan_done)
     col3.metric("Backend Completed", total_backend_done)
-
-    # ---------------- CHART DATA ----------------
 
     chart_data = pd.DataFrame({
         "Category": [
@@ -160,23 +149,14 @@ elif menu == "Dashboard":
         ]
     })
 
-    st.subheader("📊 Overview Chart")
-
-    st.bar_chart(
-        chart_data.set_index("Category")
-    )
-
-    # ---------------- DETAIL TABLE ----------------
-
-    st.subheader("Filtered Data")
+    st.bar_chart(chart_data.set_index("Category"))
 
     st.dataframe(filtered_df)
 
+
 # ================= ADD REQUEST =================
 
-if menu == "Add Request":
-
-    st.subheader("Add New Request")
+elif menu == "Add Request":
 
     vin = st.text_input("VIN")
     state = st.text_input("State")
@@ -290,7 +270,7 @@ elif menu == "Vahan Status":
         if ok:
             st.success("Forwarded to Lumax")
         else:
-            st.error("First set status to Done")
+            st.error("Set status to Done first")
 
 
 # ================= BACKEND =================
