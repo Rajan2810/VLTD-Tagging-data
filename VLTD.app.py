@@ -308,22 +308,22 @@ elif menu == "Backend Status":
 # ---------------- Download ----------------
 elif menu == "Download Data":
 
-save_data(data)
+    save_data(data)
 
-if os.path.exists(EXCEL_FILE):
+    if os.path.exists(EXCEL_FILE):
 
-    with open(EXCEL_FILE, "rb") as file:
+        with open(EXCEL_FILE, "rb") as file:
 
-        st.download_button(
-            label="⬇ Download Excel",
-            data=file,
-            file_name="VLTD Tagging data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            st.download_button(
+                label="⬇ Download Excel",
+                data=file,
+                file_name="VLTD Tagging data.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
-else:
+    else:
 
-    st.error("Excel file not found")
+        st.error("Excel file not found")
             
             # ---------------- Output File ----------------
 
