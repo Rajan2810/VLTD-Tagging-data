@@ -102,7 +102,7 @@ menu = st.sidebar.selectbox(
 
 if menu == "Dashboard":
 
-    st.subheader("📊 Dashboard")
+    st.subheader("📊 Status Dashboard")
 
     df = pd.DataFrame(data)
 
@@ -110,49 +110,224 @@ if menu == "Dashboard":
         st.warning("No data available")
         st.stop()
 
-    df["request_date"] = pd.to_datetime(df["request_date"])
+    # ---------------- DATE FILTER ----------------
 
-    start_date = st.date_input("Start Date")
-    end_date = st.date_input("End Date")
+    df["request_date"] = pd.to_datetime(
+        df["request_date"],
+        errors="coerce"
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=df["request_date"].min().date()
+        )
+
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=df["request_date"].max().date()
+        )
 
     filtered_df = df[
-        (df["request_date"].dt.date >= start_date) &
+
+        (df["request_date"].dt.date >= start_date)
+
+        &
+
         (df["request_date"].dt.date <= end_date)
+
     ]
 
-    total_requests = len(filtered_df)
+    # ---------------- KPI ----------------
+
+    total_requests = len(
+        filtered_df
+    )
 
     total_vahan_done = len(
-        filtered_df[filtered_df["vahan_status"] == "Done"]
+
+        filtered_df[
+            filtered_df[
+                "vahan_status"
+            ] == "Done"
+        ]
+
     )
 
     total_backend_done = len(
-        filtered_df[filtered_df["tagging_status"] == "Completed"]
+
+        filtered_df[
+            filtered_df[
+                "tagging_status"
+            ] == "Completed"
+        ]
+
     )
 
-    col1, col2, col3 = st.columns(3)
+    c1, c2, c3 = st.columns(3)
 
-    col1.metric("Total Requests", total_requests)
-    col2.metric("Vahan Done", total_vahan_done)
-    col3.metric("Backend Completed", total_backend_done)
+    c1.metric(
+        "Total Requests",
+        total_requests
+    )
+
+    c2.metric(
+        "Total Vahan Tagging",
+        total_vahan_done
+    )
+
+    c3.metric(
+        "Total State Backend Tagging",
+        total_backend_done
+    )
+
+    # ---------------- BAR CHART ----------------
+
+    st.subheader(
+        "📈 Summary Chart"
+    )
 
     chart_data = pd.DataFrame({
+
         "Category": [
+
             "Total Requests",
-            "Vahan Done",
-            "Backend Completed"
+
+            "Vahan Tagged",
+
+            "Backend Tagged"
+
         ],
+
         "Count": [
+
             total_requests,
+
             total_vahan_done,
+
             total_backend_done
+
         ]
+
     })
 
-    st.bar_chart(chart_data.set_index("Category"))
+    st.bar_chart(
 
-    st.dataframe(filtered_df)
+        chart_data.set_index(
+            "Category"
+        )
 
+    )
+
+    # ---------------- PIE CHART ----------------
+
+    st.subheader(
+        "🥧 Status Distribution"
+    )
+
+    pie_df = chart_data.set_index(
+        "Category"
+    )
+
+    fig = pie_df.plot.pie(
+
+        y="Count",
+
+        autopct="%1.1f%%",
+
+        figsize=(7, 7)
+
+    ).get_figure()
+
+    st.pyplot(
+        fig
+    )
+
+    # ---------------- STATE SUMMARY ----------------
+
+    st.subheader(
+        "📍 State Wise Requests"
+    )
+
+    state_df = (
+
+        filtered_df
+
+        .groupby(
+            "state"
+        )
+
+        .size()
+
+        .reset_index(
+            name="Total"
+        )
+
+    )
+
+    st.bar_chart(
+
+        state_df.set_index(
+            "state"
+        )
+
+    )
+
+    # ---------------- TAGGED BY ----------------
+
+    st.subheader(
+        "👤 Tagged By Summary"
+    )
+
+    tagged = (
+
+        filtered_df[
+            "vahan_tagged_by"
+        ]
+
+        .fillna(
+            "Not Assigned"
+        )
+
+        .value_counts()
+
+    )
+
+    st.bar_chart(
+        tagged
+    )
+
+    # ---------------- DATA TABLE ----------------
+
+    st.subheader(
+        "📋 Filtered Records"
+    )
+
+    st.dataframe(
+        filtered_df,
+        use_container_width=True
+    )
+
+    # ---------------- DOWNLOAD FILTERED ----------------
+
+    csv = filtered_df.to_csv(
+        index=False
+    )
+
+    st.download_button(
+
+        "⬇ Download Filtered Data",
+
+        csv,
+
+        file_name="Dashboard_Filtered_Data.csv",
+
+        mime="text/csv"
+
+    )
 
 # ================= ADD REQUEST =================
 
