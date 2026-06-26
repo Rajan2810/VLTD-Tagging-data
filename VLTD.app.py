@@ -90,6 +90,7 @@ data = load_data()
 menu = st.sidebar.selectbox(
     "Menu",
     [
+        "Dashboard",
         "Add Request",
         "Bulk Upload",
         "Vahan Status",
@@ -97,7 +98,79 @@ menu = st.sidebar.selectbox(
         "Download Data"
     ]
 )
+# ================= DASHBOARD =================
 
+elif menu == "Dashboard":
+
+    st.subheader("📊 Status Dashboard")
+
+    df = pd.DataFrame(data)
+
+    if df.empty:
+        st.warning("No data available")
+        st.stop()
+
+    # ---------------- DATE FILTER ----------------
+    st.subheader("Filter by Date")
+
+    date_col = "request_date"
+
+    df[date_col] = pd.to_datetime(df[date_col])
+
+    start_date = st.date_input("Start Date")
+    end_date = st.date_input("End Date")
+
+    filtered_df = df[
+        (df[date_col].dt.date >= start_date) &
+        (df[date_col].dt.date <= end_date)
+    ]
+
+    # ---------------- KPIs ----------------
+
+    total_requests = len(filtered_df)
+
+    total_vahan_done = len(
+        filtered_df[filtered_df["vahan_status"] == "Done"]
+    )
+
+    total_backend_done = len(
+        filtered_df[filtered_df["tagging_status"] == "Completed"]
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    col1.metric("Total Requests", total_requests)
+
+    col2.metric("Vahan Tagged (Done)", total_vahan_done)
+
+    col3.metric("Backend Completed", total_backend_done)
+
+    # ---------------- CHART DATA ----------------
+
+    chart_data = pd.DataFrame({
+        "Category": [
+            "Total Requests",
+            "Vahan Done",
+            "Backend Completed"
+        ],
+        "Count": [
+            total_requests,
+            total_vahan_done,
+            total_backend_done
+        ]
+    })
+
+    st.subheader("📊 Overview Chart")
+
+    st.bar_chart(
+        chart_data.set_index("Category")
+    )
+
+    # ---------------- DETAIL TABLE ----------------
+
+    st.subheader("Filtered Data")
+
+    st.dataframe(filtered_df)
 
 # ================= ADD REQUEST =================
 
