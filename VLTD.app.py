@@ -222,30 +222,7 @@ if menu == "Dashboard":
 
     )
 
-    # ---------------- PIE CHART ----------------
-
-    st.subheader(
-        "🥧 Status Distribution"
-    )
-
-    pie_df = chart_data.set_index(
-        "Category"
-    )
-
-    fig = pie_df.plot.pie(
-
-        y="Count",
-
-        autopct="%1.1f%%",
-
-        figsize=(7, 7)
-
-    ).get_figure()
-
-    st.pyplot(
-        fig
-    )
-
+  
     # ---------------- STATE SUMMARY ----------------
 
     st.subheader(
