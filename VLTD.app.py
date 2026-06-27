@@ -32,14 +32,33 @@ def load_data():
 
 def save_data(data):
 
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+    # SAVE JSON
+
+    with open(
+        DATA_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            indent=4,
+            ensure_ascii=False
+        )
+
+
+
+    # SAVE EXCEL
 
     wb = openpyxl.Workbook()
+
     ws = wb.active
+
     ws.title = "VLTD Tagging"
 
     headers = [
+
         "ID",
         "VIN",
         "State",
@@ -53,12 +72,15 @@ def save_data(data):
         "Tagging Status",
         "Statebackend tagged by",
         "Closure Date"
+
     ]
 
     ws.append(headers)
 
     for r in data:
+
         ws.append([
+
             r.get("id"),
             r.get("vin"),
             r.get("state"),
@@ -66,18 +88,102 @@ def save_data(data):
             r.get("request_date"),
             r.get("vahan_status"),
             r.get("vahan_tagged_by"),
-            "Yes" if r.get("forwarded_to_lumax") else "No",
+
+            "Yes"
+            if r.get(
+                "forwarded_to_lumax"
+            )
+            else "No",
+
             r.get("forwarded_time"),
+
             r.get("remarks"),
-            r.get("tagging_status"),
-            r.get("backend_tagged_by"),
-            r.get("closure_date")
+
+            r.get(
+                "tagging_status"
+            ),
+
+            r.get(
+                "backend_tagged_by"
+            ),
+
+            r.get(
+                "closure_date"
+            )
+
         ])
 
     wb.save(EXCEL_FILE)
 
 
-# ================= UI =================
+
+    # UPLOAD TO ONEDRIVE
+
+    ok = upload_to_onedrive(
+        EXCEL_FILE
+    )
+
+    if ok:
+        print(
+            "Uploaded to OneDrive"
+        )
+    else:
+        print(
+            "Upload failed"
+            from office365.graph_client import GraphClient
+from office365.runtime.auth.client_credential import ClientCredential
+
+
+# ========= UPDATE THESE =========
+
+TENANT_ID = "YOUR_TENANT_ID"
+
+CLIENT_ID = "YOUR_CLIENT_ID"
+
+CLIENT_SECRET = "YOUR_CLIENT_SECRET"
+
+ONEDRIVE_FILE = "/VLTD Tagging data.xlsx"
+
+
+def upload_to_onedrive(local_file):
+
+    try:
+
+        credentials = ClientCredential(
+            CLIENT_ID,'747e7a9b-6ec3-4e01-b757-155943ad144c'
+            CLIENT_SECRET 'd152c348-876f-41f2-ac11-20066e494e76'
+        )
+
+        client = GraphClient(
+            TENANT_ID,'b72f33b9-b661-435e-a734-9aa9d261dc3a'
+            credentials
+        )
+
+        with open(local_file, "rb") as f:
+            content = f.read()
+
+        (
+            client
+            .me
+            .drive
+            .root
+            .get_by_path(
+                ONEDRIVE_FILE
+            )
+            .upload(
+                content
+            )
+            .execute_query()
+        )
+
+        return True
+
+    except Exception as e:
+
+        print("Upload Error:", e)
+
+        return False
+        )# ================= UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
 
