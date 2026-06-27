@@ -333,16 +333,12 @@ if menu == "Dashboard":
     )
 
     st.download_button(
-
-        "⬇ Download Filtered Data",
-
-        csv,
-
-        file_name="Dashboard_Filtered_Data.csv",
-
-        mime="text/csv"
-
-    )
+    label="⬇ Download Dashboard Data",
+    data=csv,
+    file_name="Dashboard_Report.csv",
+    mime="text/csv",
+    key="dashboard_download"
+)
 
     
 
@@ -362,18 +358,14 @@ if menu == "Dashboard":
     csv = filtered_df.to_csv(
         index=False
     )
-
-    st.download_button(
-
-        "⬇ Download Filtered Data",
-
-        csv,
-
-        file_name="Dashboard_Filtered_Data.csv",
-
-        mime="text/csv"
-
-    )
+st.download_button(
+    label="⬇ Download Excel",
+    data=f,
+    file_name="VLTD Tagging data.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    key="excel_download"
+)
+  
 
 # ================= BULK UPLOAD =================
 
