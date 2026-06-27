@@ -5,6 +5,8 @@ import json
 import os
 from datetime import datetime
 import pytz
+from office365.graph_client import GraphClient
+from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
@@ -17,7 +19,44 @@ DATA_FILE = os.path.join(SAVE_FOLDER, "tagging_requests.json")
 EXCEL_FILE = os.path.join(SAVE_FOLDER, "VLTD Tagging data.xlsx")
 
 IST = pytz.timezone("Asia/Kolkata")
+# ================= ONEDRIVE =================
 
+def upload_to_onedrive(local_file):
+
+    try:
+
+        credentials = ClientCredential(
+            st.secrets["CLIENT_ID"],
+            st.secrets["CLIENT_SECRET"]
+        )
+
+        client = GraphClient(
+            st.secrets["TENANT_ID"],
+            credentials
+        )
+
+        with open(local_file, "rb") as f:
+            content = f.read()
+
+        (
+            client
+            .me
+            .drive
+            .root
+            .get_by_path(
+                st.secrets["ONEDRIVE_FILE"]
+            )
+            .upload(content)
+            .execute_query()
+        )
+
+        st.success("Excel uploaded to OneDrive")
+
+    except Exception as e:
+
+        st.error(
+            f"Upload failed: {e}"
+        )
 
 # ================= LOAD DATA =================
 
@@ -74,7 +113,11 @@ def save_data(data):
             r.get("closure_date")
         ])
 
-    wb.save(EXCEL_FILE)
+  wb.save(EXCEL_FILE)
+
+upload_to_onedrive(
+    EXCEL_FILE
+)
 
 
 # ================= UI =================
