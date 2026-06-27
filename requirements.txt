@@ -7,3 +7,4 @@ filelock
 pymysql
 office365-rest-python-client
 plotly
+requirements.txt
