@@ -411,7 +411,72 @@ if menu == "Dashboard":
     csv = filtered_df.to_csv(
         index=False
     )
+# ================= ADD REQUEST =================
 
+elif menu == "Add Request":
+
+    st.subheader("Add New Request")
+
+    vin = st.text_input("VIN")
+
+    state = st.text_input("State")
+
+    dealer = st.text_input("Dealer Code")
+
+    if st.button(
+        "Add Request",
+        key="add_request_btn"
+    ):
+
+        if vin == "" or state == "" or dealer == "":
+
+            st.error(
+                "Please fill all fields"
+            )
+
+        else:
+
+            data.append({
+
+                "id": len(data) + 1,
+
+                "vin": vin,
+
+                "state": state,
+
+                "dealer_code": dealer,
+
+                "request_date": datetime.now(
+                    IST
+                ).strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                ),
+
+                "vahan_status": "Pending",
+
+                "vahan_tagged_by": "",
+
+                "forwarded_to_lumax": False,
+
+                "forwarded_time": "",
+
+                "remarks": "",
+
+                "tagging_status": "",
+
+                "backend_tagged_by": "",
+
+                "closure_date": ""
+
+            })
+
+            save_data(data)
+
+            st.success(
+                "Request Added Successfully"
+            )
+
+            st.rerun()
 
 # ================= BULK UPLOAD =================
 
