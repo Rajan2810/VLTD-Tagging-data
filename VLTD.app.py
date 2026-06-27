@@ -27,12 +27,11 @@ scope = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
-
 def get_client():
- creds = Credentials.from_service_account_file(
-    "service_account.json",
-    scopes=scope
-)
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scope
+    )
     return gspread.authorize(creds)
 
 # =========================
