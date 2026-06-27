@@ -100,8 +100,6 @@ menu = st.sidebar.selectbox(
 
 # ================= DASHBOARD =================
 
-# ================= DASHBOARD =================
-
 if menu == "Dashboard":
 
     st.subheader("📊 Status Dashboard")
@@ -275,6 +273,59 @@ if menu == "Dashboard":
         state_df.set_index(
             "state"
         )
+
+    )
+
+    # ---------------- TAGGED BY ----------------
+
+    st.subheader(
+        "👤 Tagged By Summary"
+    )
+
+    tagged = (
+
+        filtered_df[
+            "vahan_tagged_by"
+        ]
+
+        .fillna(
+            "Not Assigned"
+        )
+
+        .value_counts()
+
+    )
+
+    st.bar_chart(
+        tagged
+    )
+
+    # ---------------- DATA TABLE ----------------
+
+    st.subheader(
+        "📋 Filtered Records"
+    )
+
+    st.dataframe(
+        filtered_df,
+        use_container_width=True
+    )
+
+    # ---------------- DOWNLOAD FILTERED ----------------
+
+    csv = filtered_df.to_csv(
+        index=False
+    )
+
+    st.download_button(
+
+        "⬇ Download Filtered Data",
+
+        csv,
+
+        file_name="Dashboard_Filtered_Data.csv",
+
+        mime="text/csv"
 
     )
 
