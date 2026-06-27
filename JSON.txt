@@ -1,0 +1,9 @@
+{
+  "type": "service_account",
+  "project_id": "my-project-53554-500711",
+  "private_key_id": "abc123xyz",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIE....\n-----END PRIVATE KEY-----\n",
+  "client_email": "vltd-streamlit@my-project-53554-500711.iam.gserviceaccount.com",
+  "client_id": "1234567890",
+  "token_uri": "https://oauth2.googleapis.com/token"
+}
