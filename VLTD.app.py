@@ -1,10 +1,8 @@
 import streamlit as st
 import pandas as pd
-import tempfile
-from office365.runtime.auth.client_credential import ClientCredential
-from office365.sharepoint.client_context import ClientContext
-import plotly.express as px
+import os
 from datetime import datetime
+import plotly.express as px
 
 
 FILE = "VLTD_Tagging_Data.xlsx"
@@ -33,19 +31,68 @@ COLUMNS = [
 ]
 
 
+ALL_STATES = [
+
+"Andhra Pradesh",
+"Arunachal Pradesh",
+"Assam",
+"Bihar",
+"Chhattisgarh",
+"Delhi",
+"Goa",
+"Gujarat",
+"Haryana",
+"Himachal Pradesh",
+"Jharkhand",
+"Karnataka",
+"Kerala",
+"Madhya Pradesh",
+"Maharashtra",
+"Manipur",
+"Meghalaya",
+"Mizoram",
+"Nagaland",
+"Odisha",
+"Punjab",
+"Rajasthan",
+"Sikkim",
+"Tamil Nadu",
+"Telangana",
+"Tripura",
+"Uttar Pradesh",
+"Uttarakhand",
+"West Bengal",
+
+"Andaman and Nicobar",
+"Chandigarh",
+"Dadra and Nagar Haveli",
+"Daman and Diu",
+"Jammu and Kashmir",
+"Ladakh",
+"Lakshadweep",
+"Puducherry"
+
+]
+
+
 def load_data():
 
-    try:
+    if os.path.exists(FILE):
 
         df = pd.read_excel(
             FILE,
             dtype=str
         )
 
-    except:
+    else:
 
         df = pd.DataFrame(
             columns=COLUMNS
+        )
+
+        df.to_excel(
+            FILE,
+            index=False
         )
 
     for c in COLUMNS:
@@ -60,80 +107,17 @@ def load_data():
 
 def save_data(df):
 
-    temp = tempfile.NamedTemporaryFile(
-        suffix=".xlsx",
-        delete=False
-    )
-
     df.to_excel(
-        temp.name,
+        FILE,
         index=False,
         engine="openpyxl"
     )
 
-    try:
-
-        ctx = ClientContext(
-
-            st.secrets[
-                "SITE_URL"
-            ]
-
-        ).with_credentials(
-
-            ClientCredential(
-
-                st.secrets[
-                    "CLIENT_ID"
-                ],
-
-                st.secrets[
-                    "CLIENT_SECRET"
-                ]
-
-            )
-
-        )
-
-        with open(
-            temp.name,
-            "rb"
-        ) as f:
-
-            content = f.read()
-
-        folder = ctx.web.get_folder_by_server_relative_url(
-
-            st.secrets[
-                "FOLDER_PATH"
-            ]
-
-        )
-
-        folder.upload_file(
-
-            FILE,
-
-            content
-
-        )
-
-        ctx.execute_query()
-
-    except Exception as e:
-
-        st.error(
-            f"Upload failed: {e}"
-        )
-
 
 
 st.set_page_config(
-
 page_title="VLTD",
-
 layout="wide"
-
 )
 
 
