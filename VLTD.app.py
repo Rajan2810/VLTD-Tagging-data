@@ -125,31 +125,37 @@ def save_data(data):
     wb.save(EXCEL_FILE)
 
     # Upload to OneDrive
-    upload_to_onedrive(
-        EXCEL_FILE
-    )
+  def upload_to_onedrive(local_file):
 
+    try:
 
-# ================= UI =================
+        credentials = ClientCredential(
+            st.secrets["CLIENT_ID"],
+            st.secrets["CLIENT_SECRET"]
+        )
 
-st.set_page_config(page_title="VLTD Tagging", layout="wide")
+        client = GraphClient(
+            st.secrets["TENANT_ID"],
+            credentials
+        )
 
-st.title("VLTD Tagging System")
+        with open(local_file, "rb") as f:
 
-data = load_data()
+            client.me.drive.root.get_by_path(
+                st.secrets["ONEDRIVE_FILE"]
+            ).upload(
+                f.read()
+            ).execute_query()
 
-menu = st.sidebar.selectbox(
-    "Menu",
-    [
-        "Dashboard",
-        "Add Request",
-        "Bulk Upload",
-        "Vahan Status",
-        "Backend Status",
-        "Download Data"
-    ]
-)
+        return True
 
+    except Exception as e:
+
+        st.error(
+            f"Upload failed: {str(e)}"
+        )
+
+        return False
 
 # ================= DASHBOARD =================
 
