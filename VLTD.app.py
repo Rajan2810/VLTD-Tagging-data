@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime
 import plotly.express as px
 import os
-
+import plotly.express as px
 # =========================
 # PAGE CONFIG
 # =========================
