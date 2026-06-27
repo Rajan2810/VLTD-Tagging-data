@@ -5,6 +5,8 @@ import json
 import os
 from datetime import datetime
 import pytz
+from office365.graph_client import GraphClient
+from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
@@ -147,15 +149,32 @@ ONEDRIVE_FILE = "/VLTD Tagging data.xlsx"
 
 def upload_to_onedrive(local_file):
 
+
+
+# ================= SECRETS =================
+
+TENANT_ID = st.secrets["b72f33b9-b661-435e-a734-9aa9d261dc3aD"]
+
+CLIENT_ID = st.secrets["747e7a9b-6ec3-4e01-b757-155943ad144c"]
+
+CLIENT_SECRET = st.secrets["d152c348-876f-41f2-ac11-20066e494e76"]
+
+ONEDRIVE_FILE = st.secrets[""D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx""]
+
+
+# ================= UPLOAD =================
+
+def upload_to_onedrive(local_file):
+
     try:
 
         credentials = ClientCredential(
-            CLIENT_ID,'747e7a9b-6ec3-4e01-b757-155943ad144c'
-            CLIENT_SECRET 'd152c348-876f-41f2-ac11-20066e494e76'
+            CLIENT_ID,
+            CLIENT_SECRET
         )
 
         client = GraphClient(
-            TENANT_ID,'b72f33b9-b661-435e-a734-9aa9d261dc3a'
+            TENANT_ID,
             credentials
         )
 
@@ -178,9 +197,12 @@ def upload_to_onedrive(local_file):
 
         return True
 
+
     except Exception as e:
 
-        print("Upload Error:", e)
+        st.error(
+            f"Upload failed: {e}"
+        )
 
         return False
         )# ================= UI =================
