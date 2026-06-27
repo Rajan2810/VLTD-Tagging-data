@@ -110,12 +110,15 @@ if menu == "Dashboard":
         st.warning("No data available")
         st.stop()
 
-    # ---------------- DATE FILTER ----------------
-
+    # Convert date
     df["request_date"] = pd.to_datetime(
         df["request_date"],
         errors="coerce"
     )
+
+    # ---------- DATE FILTER ----------
+
+    st.subheader("📅 Filter")
 
     col1, col2 = st.columns(2)
 
@@ -141,13 +144,13 @@ if menu == "Dashboard":
 
     ]
 
-    # ---------------- KPI ----------------
+    # ---------- KPI ----------
 
     total_requests = len(
         filtered_df
     )
 
-    total_vahan_done = len(
+    total_vahan = len(
 
         filtered_df[
             filtered_df[
@@ -157,7 +160,7 @@ if menu == "Dashboard":
 
     )
 
-    total_backend_done = len(
+    total_backend = len(
 
         filtered_df[
             filtered_df[
@@ -167,38 +170,55 @@ if menu == "Dashboard":
 
     )
 
-    c1, c2, c3 = st.columns(3)
+    total_forward = len(
+
+        filtered_df[
+            filtered_df[
+                "forwarded_to_lumax"
+            ] == True
+        ]
+
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
 
     c1.metric(
-        "Total Requests",
+        "📦 Total Requests",
         total_requests
     )
 
     c2.metric(
-        "Total Vahan Tagging",
-        total_vahan_done
+        "🚘 Vahan Tagged",
+        total_vahan
     )
 
     c3.metric(
-        "Total State Backend Tagging",
-        total_backend_done
+        "🏁 Backend Tagged",
+        total_backend
     )
 
-    # ---------------- BAR CHART ----------------
+    c4.metric(
+        "📤 Forwarded",
+        total_forward
+    )
+
+    # ---------- SUMMARY ----------
 
     st.subheader(
-        "📈 Summary Chart"
+        "📈 Status Summary"
     )
 
-    chart_data = pd.DataFrame({
+    chart = pd.DataFrame({
 
         "Category": [
 
-            "Total Requests",
+            "Requests",
 
-            "Vahan Tagged",
+            "Vahan",
 
-            "Backend Tagged"
+            "Backend",
+
+            "Forwarded"
 
         ],
 
@@ -206,9 +226,11 @@ if menu == "Dashboard":
 
             total_requests,
 
-            total_vahan_done,
+            total_vahan,
 
-            total_backend_done
+            total_backend,
+
+            total_forward
 
         ]
 
@@ -216,20 +238,19 @@ if menu == "Dashboard":
 
     st.bar_chart(
 
-        chart_data.set_index(
+        chart.set_index(
             "Category"
         )
 
     )
 
-  
-    # ---------------- STATE SUMMARY ----------------
+    # ---------- STATE ----------
 
     st.subheader(
         "📍 State Wise Requests"
     )
 
-    state_df = (
+    state_chart = (
 
         filtered_df
 
@@ -247,16 +268,16 @@ if menu == "Dashboard":
 
     st.bar_chart(
 
-        state_df.set_index(
+        state_chart.set_index(
             "state"
         )
 
     )
 
-    # ---------------- TAGGED BY ----------------
+    # ---------- TAGGED BY ----------
 
     st.subheader(
-        "👤 Tagged By Summary"
+        "👤 Vahan Tagged By"
     )
 
     tagged = (
@@ -266,7 +287,7 @@ if menu == "Dashboard":
         ]
 
         .fillna(
-            "Not Assigned"
+            "Pending"
         )
 
         .value_counts()
@@ -277,10 +298,10 @@ if menu == "Dashboard":
         tagged
     )
 
-    # ---------------- DATA TABLE ----------------
+    # ---------- RECORDS ----------
 
     st.subheader(
-        "📋 Filtered Records"
+        "📋 Records"
     )
 
     st.dataframe(
@@ -288,6 +309,23 @@ if menu == "Dashboard":
         use_container_width=True
     )
 
+    # ---------- DOWNLOAD ----------
+
+    csv = filtered_df.to_csv(
+        index=False
+    )
+
+    st.download_button(
+
+        "⬇ Download Dashboard Data",
+
+        csv,
+
+        file_name="Dashboard_Report.csv",
+
+        mime="text/csv"
+
+    )
     # ---------------- DOWNLOAD FILTERED ----------------
 
     csv = filtered_df.to_csv(
