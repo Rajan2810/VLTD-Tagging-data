@@ -1,8 +1,12 @@
-{"type": "service_account",
-"SHEET_ID": "1BNu9Do5Hz6DIqyTsRPsPOieBMy8bbXz2_bG8r7z_VTI",
+{
+  "type": "service_account",
   "project_id": "my-project-53554-500711",
   "private_key_id": "1059b7411df9e9fb9bb0157ef16351a81e59d66c",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkq...\n-----END PRIVATE KEY-----\n"
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkq...\n-----END PRIVATE KEY-----\n",
   "client_email": "vltd-streamlit@my-project-53554-500711.iam.gserviceaccount.com",
   "client_id": "109387552189322377729",
-  "universe_domain": "googleapis.com"}
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "universe_domain": "googleapis.com"
+}
