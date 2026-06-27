@@ -166,7 +166,31 @@ def upload_to_onedrive(local_file):
         )
 
         return False
+# ================= UI =================
 
+st.set_page_config(
+    page_title="VLTD Tagging",
+    layout="wide"
+)
+
+st.title(
+    "VLTD Tagging System"
+)
+
+data = load_data()
+
+# CREATE MENU FIRST
+menu = st.sidebar.selectbox(
+    "Menu",
+    [
+        "Dashboard",
+        "Add Request",
+        "Bulk Upload",
+        "Vahan Status",
+        "Backend Status",
+        "Download Data"
+    ]
+)
 # ================= DASHBOARD =================
 
 if menu == "Dashboard":
