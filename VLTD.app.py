@@ -1,144 +1,119 @@
 import streamlit as st
 import pandas as pd
-import os
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
-import plotly.express as px
 
+# =========================
+# GOOGLE SHEET CONFIG
+# =========================
 
-FILE = "VLTD_Tagging_Data.xlsx"
+SHEET_ID = st.secrets["SHEET_ID"]
 
-
-COLUMNS = [
-
-"Request Date",
-"VIN",
-"State",
-"Dealer Code",
-
-"Vahan Status",
-"Vahan Tagged By",
-"Vahan Remarks",
-"Vahan Update Time",
-
-"Forward To Lumax",
-"Lumax Forward Time",
-
-"State Backend Status",
-"State Tagged By",
-"State Remarks",
-"State Update Time"
-
+scope = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
 ]
 
+def get_client():
 
-ALL_STATES = [
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scope
+    )
 
-"Andhra Pradesh",
-"Arunachal Pradesh",
-"Assam",
-"Bihar",
-"Chhattisgarh",
-"Delhi",
-"Goa",
-"Gujarat",
-"Haryana",
-"Himachal Pradesh",
-"Jharkhand",
-"Karnataka",
-"Kerala",
-"Madhya Pradesh",
-"Maharashtra",
-"Manipur",
-"Meghalaya",
-"Mizoram",
-"Nagaland",
-"Odisha",
-"Punjab",
-"Rajasthan",
-"Sikkim",
-"Tamil Nadu",
-"Telangana",
-"Tripura",
-"Uttar Pradesh",
-"Uttarakhand",
-"West Bengal",
+    client = gspread.authorize(creds)
 
-"Andaman and Nicobar",
-"Chandigarh",
-"Dadra and Nagar Haveli",
-"Daman and Diu",
-"Jammu and Kashmir",
-"Ladakh",
-"Lakshadweep",
-"Puducherry"
+    return client
 
-]
 
+# =========================
+# LOAD DATA FROM SHEET
+# =========================
 
 def load_data():
 
-    if os.path.exists(FILE):
+    try:
 
-        df = pd.read_excel(
-            FILE,
-            dtype=str
-        )
+        client = get_client()
 
-    else:
+        sheet = client.open_by_key(SHEET_ID).sheet1
 
-        df = pd.DataFrame(
-            columns=COLUMNS
-        )
+        data = sheet.get_all_records()
 
-        df.to_excel(
-            FILE,
-            index=False
-        )
+        return pd.DataFrame(data)
 
-    for c in COLUMNS:
+    except:
 
-        if c not in df.columns:
-
-            df[c] = ""
-
-    return df.fillna("")
+        return pd.DataFrame(columns=COLUMNS)
 
 
+# =========================
+# SAVE DATA TO SHEET
+# =========================
 
 def save_data(df):
 
-    df.to_excel(
-        FILE,
-        index=False,
-        engine="openpyxl"
-    )
+    try:
+
+        client = get_client()
+
+        sheet = client.open_by_key(SHEET_ID).sheet1
+
+        sheet.clear()
+
+        data = [
+            df.columns.tolist()
+        ] + df.fillna("").astype(str).values.tolist()
+
+        sheet.update(data)
+
+        st.success("Data saved to Google Sheet")
+
+    except Exception as e:
+
+        st.error(f"Save failed: {e}")
 
 
+# =========================
+# DEFAULT COLUMNS
+# =========================
 
-st.set_page_config(
-page_title="VLTD",
-layout="wide"
-)
+COLUMNS = [
 
+    "Request Date",
+    "VIN",
+    "State",
+    "Dealer Code",
+
+    "Vahan Status",
+    "Vahan Tagged By",
+    "Vahan Remarks",
+    "Vahan Update Time",
+
+    "Forward To Lumax",
+    "Lumax Forward Time",
+
+    "State Backend Status",
+    "State Tagged By",
+    "State Remarks",
+    "State Update Time"
+
+]
+
+
+# =========================
+# LOAD DATAFRAME
+# =========================
 
 df = load_data()
 
+# ensure columns exist
+for c in COLUMNS:
+    if c not in df.columns:
+        df[c] = ""
 
-page = st.sidebar.radio(
-
-"Menu",
-
-[
-
-"Dashboard",
-
-"Add Request",
-
-"Vahan Status",
-
-"State Backend Status"
-
-]
+df = df.fillna("")
 
 )# ==================================
 # DASHBOARD
