@@ -358,12 +358,27 @@ if menu == "Dashboard":
     csv = filtered_df.to_csv(
         index=False
     )
+# ---------- RECORDS ----------
+
+st.subheader("📋 Filtered Records")
+
+st.dataframe(
+    filtered_df,
+    use_container_width=True
+)
+
+# ---------- DOWNLOAD ----------
+
+csv = filtered_df.to_csv(
+    index=False
+)
+
 st.download_button(
-    label="⬇ Download Excel",
-    data=f,
-    file_name="VLTD Tagging data.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    key="excel_download"
+    label="⬇ Download Dashboard Data",
+    data=csv,
+    file_name="Dashboard_Report.csv",
+    mime="text/csv",
+    key="dashboard_download"
 )
   
 
