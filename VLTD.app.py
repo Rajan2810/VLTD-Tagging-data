@@ -125,7 +125,9 @@ def save_data(data):
     wb.save(EXCEL_FILE)
 
     # Upload to OneDrive
-  def upload_to_onedrive(local_file):
+# ================= ONEDRIVE UPLOAD =================
+
+def upload_to_onedrive(local_file):
 
     try:
 
@@ -141,18 +143,26 @@ def save_data(data):
 
         with open(local_file, "rb") as f:
 
-            client.me.drive.root.get_by_path(
+            content = f.read()
+
+        (
+            client
+            .me
+            .drive
+            .root
+            .get_by_path(
                 st.secrets["ONEDRIVE_FILE"]
-            ).upload(
-                f.read()
-            ).execute_query()
+            )
+            .upload(content)
+            .execute_query()
+        )
 
         return True
 
     except Exception as e:
 
         st.error(
-            f"Upload failed: {str(e)}"
+            f"Upload failed: {e}"
         )
 
         return False
