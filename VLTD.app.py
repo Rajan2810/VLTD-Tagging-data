@@ -5,21 +5,49 @@ import json
 import os
 from datetime import datetime
 import pytz
+
 from office365.graph_client import GraphClient
 from office365.runtime.auth.client_credential import ClientCredential
+
 
 # ================= CONFIG =================
 
 SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
 
-os.makedirs(SAVE_FOLDER, exist_ok=True)
+DATA_FILE = os.path.join(
+    SAVE_FOLDER,
+    "tagging_requests.json"
+)
 
-DATA_FILE = os.path.join(SAVE_FOLDER, "tagging_requests.json")
+EXCEL_FILE = os.path.join(
+    SAVE_FOLDER,
+    "VLTD Tagging data.xlsx"
+)
 
-EXCEL_FILE = os.path.join(SAVE_FOLDER, "VLTD Tagging data.xlsx")
+IST = pytz.timezone(
+    "Asia/Kolkata"
+)
 
-IST = pytz.timezone("Asia/Kolkata")
-# ================= ONEDRIVE =================
+
+# ================= LOAD =================
+
+def load_data():
+
+    if os.path.exists(DATA_FILE):
+
+        with open(
+            DATA_FILE,
+            "r",
+            encoding="utf-8"
+        ) as f:
+
+            return json.load(f)
+
+    return []
+
+
+# ================= ADD HERE =================
+# PUT upload_to_onedrive() HERE
 
 def upload_to_onedrive(local_file):
 
@@ -35,22 +63,15 @@ def upload_to_onedrive(local_file):
             credentials
         )
 
-        with open(local_file, "rb") as f:
-            content = f.read()
+        with open(local_file, "rb") as file:
 
-        (
-            client
-            .me
-            .drive
-            .root
-            .get_by_path(
+            client.me.drive.root.get_by_path(
                 st.secrets["ONEDRIVE_FILE"]
-            )
-            .upload(content)
-            .execute_query()
-        )
+            ).upload(
+                file.read()
+            ).execute_query()
 
-        st.success("Excel uploaded to OneDrive")
+        return True
 
     except Exception as e:
 
@@ -58,15 +79,37 @@ def upload_to_onedrive(local_file):
             f"Upload failed: {e}"
         )
 
-# ================= LOAD DATA =================
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
+        return False
 
 
+# ================= SAVE =================
+
+def save_data(data):
+
+    with open(
+        DATA_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            indent=4
+        )
+
+    wb = openpyxl.Workbook()
+
+    ws = wb.active
+
+    ws.title = "VLTD Tagging"
+
+    wb.save(EXCEL_FILE)
+
+    # ADD THIS
+    upload_to_onedrive(
+        EXCEL_FILE
+    )
 # ================= SAVE DATA =================
 
 def save_data(data):
