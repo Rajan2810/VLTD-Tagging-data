@@ -5,8 +5,6 @@ import json
 import os
 from datetime import datetime
 import pytz
-from office365.graph_client import GraphClient
-from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
@@ -34,54 +32,14 @@ def load_data():
 
 def save_data(data):
 
-    # SAVE JSON
-
-    with open(
-        DATA_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            data,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
-
-
-
-    # SAVE EXCEL
-
-   def save_data(data):
-
-    # SAVE JSON
-
-    with open(
-        DATA_FILE,
-        "w",
-        encoding="utf-8"
-    ) as f:
-
-        json.dump(
-            data,
-            f,
-            indent=4,
-            ensure_ascii=False
-        )
-
-
-
-    # SAVE EXCEL
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
     wb = openpyxl.Workbook()
-
     ws = wb.active
-
     ws.title = "VLTD Tagging"
 
     headers = [
-
         "ID",
         "VIN",
         "State",
@@ -95,15 +53,12 @@ def save_data(data):
         "Tagging Status",
         "Statebackend tagged by",
         "Closure Date"
-
     ]
 
     ws.append(headers)
 
     for r in data:
-
         ws.append([
-
             r.get("id"),
             r.get("vin"),
             r.get("state"),
@@ -111,50 +66,18 @@ def save_data(data):
             r.get("request_date"),
             r.get("vahan_status"),
             r.get("vahan_tagged_by"),
-
-            "Yes"
-            if r.get(
-                "forwarded_to_lumax"
-            )
-            else "No",
-
+            "Yes" if r.get("forwarded_to_lumax") else "No",
             r.get("forwarded_time"),
-
             r.get("remarks"),
-
-            r.get(
-                "tagging_status"
-            ),
-
-            r.get(
-                "backend_tagged_by"
-            ),
-
-            r.get(
-                "closure_date"
-            )
-
+            r.get("tagging_status"),
+            r.get("backend_tagged_by"),
+            r.get("closure_date")
         ])
 
     wb.save(EXCEL_FILE)
 
 
-
-    # UPLOAD TO ONEDRIVE
-
-    ok = upload_to_onedrive(
-        EXCEL_FILE
-    )
-
-    if ok:
-        print(
-            "Uploaded to OneDrive"
-        )
-    else:
-        print(
-            "Upload failed"
-        )
-        )# ================= UI =================
+# ================= UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
 
@@ -179,7 +102,7 @@ menu = st.sidebar.selectbox(
 
 if menu == "Dashboard":
 
-    st.subheader("📊 Status Dashboard")
+    st.subheader("📊 Dashboard")
 
     df = pd.DataFrame(data)
 
@@ -187,201 +110,49 @@ if menu == "Dashboard":
         st.warning("No data available")
         st.stop()
 
-    # ---------------- DATE FILTER ----------------
+    df["request_date"] = pd.to_datetime(df["request_date"])
 
-    df["request_date"] = pd.to_datetime(
-        df["request_date"],
-        errors="coerce"
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        start_date = st.date_input(
-            "Start Date",
-            value=df["request_date"].min().date()
-        )
-
-    with col2:
-        end_date = st.date_input(
-            "End Date",
-            value=df["request_date"].max().date()
-        )
+    start_date = st.date_input("Start Date")
+    end_date = st.date_input("End Date")
 
     filtered_df = df[
-
-        (df["request_date"].dt.date >= start_date)
-
-        &
-
+        (df["request_date"].dt.date >= start_date) &
         (df["request_date"].dt.date <= end_date)
-
     ]
 
-    # ---------------- KPI ----------------
-
-    total_requests = len(
-        filtered_df
-    )
+    total_requests = len(filtered_df)
 
     total_vahan_done = len(
-
-        filtered_df[
-            filtered_df[
-                "vahan_status"
-            ] == "Done"
-        ]
-
+        filtered_df[filtered_df["vahan_status"] == "Done"]
     )
 
     total_backend_done = len(
-
-        filtered_df[
-            filtered_df[
-                "tagging_status"
-            ] == "Completed"
-        ]
-
+        filtered_df[filtered_df["tagging_status"] == "Completed"]
     )
 
-    c1, c2, c3 = st.columns(3)
+    col1, col2, col3 = st.columns(3)
 
-    c1.metric(
-        "Total Requests",
-        total_requests
-    )
-
-    c2.metric(
-        "Total Vahan Tagging",
-        total_vahan_done
-    )
-
-    c3.metric(
-        "Total State Backend Tagging",
-        total_backend_done
-    )
-
-    # ---------------- BAR CHART ----------------
-
-    st.subheader(
-        "📈 Summary Chart"
-    )
+    col1.metric("Total Requests", total_requests)
+    col2.metric("Vahan Done", total_vahan_done)
+    col3.metric("Backend Completed", total_backend_done)
 
     chart_data = pd.DataFrame({
-
         "Category": [
-
             "Total Requests",
-
-            "Vahan Tagged",
-
-            "Backend Tagged"
-
+            "Vahan Done",
+            "Backend Completed"
         ],
-
         "Count": [
-
             total_requests,
-
             total_vahan_done,
-
             total_backend_done
-
         ]
-
     })
 
-    st.bar_chart(
+    st.bar_chart(chart_data.set_index("Category"))
 
-        chart_data.set_index(
-            "Category"
-        )
+    st.dataframe(filtered_df)
 
-    )
-
-  
-    # ---------------- STATE SUMMARY ----------------
-
-    st.subheader(
-        "📍 State Wise Requests"
-    )
-
-    state_df = (
-
-        filtered_df
-
-        .groupby(
-            "state"
-        )
-
-        .size()
-
-        .reset_index(
-            name="Total"
-        )
-
-    )
-
-    st.bar_chart(
-
-        state_df.set_index(
-            "state"
-        )
-
-    )
-
-    # ---------------- TAGGED BY ----------------
-
-    st.subheader(
-        "👤 Tagged By Summary"
-    )
-
-    tagged = (
-
-        filtered_df[
-            "vahan_tagged_by"
-        ]
-
-        .fillna(
-            "Not Assigned"
-        )
-
-        .value_counts()
-
-    )
-
-    st.bar_chart(
-        tagged
-    )
-
-    # ---------------- DATA TABLE ----------------
-
-    st.subheader(
-        "📋 Filtered Records"
-    )
-
-    st.dataframe(
-        filtered_df,
-        use_container_width=True
-    )
-
-    # ---------------- DOWNLOAD FILTERED ----------------
-
-    csv = filtered_df.to_csv(
-        index=False
-    )
-
-    st.download_button(
-
-        "⬇ Download Filtered Data",
-
-        csv,
-
-        file_name="Dashboard_Filtered_Data.csv",
-
-        mime="text/csv"
-
-    )
 
 # ================= ADD REQUEST =================
 
@@ -537,58 +308,7 @@ elif menu == "Backend Status":
 
         save_data(data)
         st.success("Backend Updated")
-# ================= EDIT REQUEST =================
 
-elif menu == "Edit Request":
-
-    st.subheader("✏ Edit Request")
-
-    if not data:
-        st.warning("No records available")
-        st.stop()
-
-    ids = [r["id"] for r in data]
-
-    selected = st.selectbox(
-        "Select Request ID",
-        ids
-    )
-
-    record = next(
-        x for x in data
-        if x["id"] == selected
-    )
-
-    vin = st.text_input(
-        "VIN",
-        record["vin"]
-    )
-
-    state = st.text_input(
-        "State",
-        record["state"]
-    )
-
-    dealer = st.text_input(
-        "Dealer Code",
-        record["dealer_code"]
-    )
-
-    remarks = st.text_input(
-        "Remarks",
-        record.get("remarks", "")
-    )
-
-    if st.button("Update Record"):
-
-        record["vin"] = vin
-        record["state"] = state
-        record["dealer_code"] = dealer
-        record["remarks"] = remarks
-
-        save_data(data)
-
-        st.success("Record Updated Successfully")
 
 # ================= DOWNLOAD =================
 
