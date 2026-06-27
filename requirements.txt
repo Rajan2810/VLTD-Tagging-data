@@ -3,7 +3,6 @@ pandas
 openpyxl
 pytz
 gunicorn
-filelock
-office365-rest-python-client
-plotly
+google-auth
+gspread
 google-auth
