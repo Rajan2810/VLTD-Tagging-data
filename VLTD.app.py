@@ -4,8 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
 import plotly.express as px
-import os
-import plotly.express as px
+
 # =========================
 # PAGE CONFIG
 # =========================
@@ -30,10 +29,11 @@ scope = [
 ]
 
 def get_client():
- creds = Credentials.from_service_account_file(
-    "service_account.json",
-    scopes=scope
-)
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scope
+    )
+    return gspread.authorize(creds)
 
 # =========================
 # COLUMNS
@@ -53,9 +53,8 @@ def load_data():
         client = get_client()
         sheet = client.open_by_key(SHEET_ID).sheet1
         data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        return df
-    except:
+        return pd.DataFrame(data)
+    except Exception:
         return pd.DataFrame(columns=COLUMNS)
 
 df = load_data()
@@ -82,7 +81,7 @@ def save_data(df):
         st.error(f"Save Error: {e}")
 
 # =========================
-# STATES LIST
+# STATES
 # =========================
 ALL_STATES = [
 "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -103,7 +102,6 @@ if page == "Dashboard":
     temp = df.copy()
 
     if len(temp):
-
         temp["Request Date"] = pd.to_datetime(temp["Request Date"], errors="coerce")
 
         col1, col2 = st.columns(2)
@@ -118,7 +116,6 @@ if page == "Dashboard":
         ]
 
     c1, c2, c3 = st.columns(3)
-
     c1.metric("Total Requests", len(temp))
     c2.metric("Vahan Completed", (temp["Vahan Status"] == "Complete").sum())
     c3.metric("State Completed", (temp["State Backend Status"] == "Completed").sum())
@@ -160,41 +157,34 @@ elif page == "Add Request":
     state = st.selectbox("Select State", ALL_STATES)
     dealer = st.text_input("Enter Dealer Code")
 
-    c1, c2 = st.columns(2)
+    if st.button("Submit"):
 
-    with c1:
-        if st.button("Submit"):
+        if vin:
 
-            if vin:
+            new_row = {
+                "Request Date": str(datetime.now()),
+                "VIN": vin,
+                "State": state,
+                "Dealer Code": dealer,
+                "Vahan Status": "Pending",
+                "Vahan Tagged By": "",
+                "Vahan Remarks": "",
+                "Vahan Update Time": "",
+                "Forward To Lumax": "No",
+                "Lumax Forward Time": "",
+                "State Backend Status": "Pending",
+                "State Tagged By": "",
+                "State Remarks": "",
+                "State Update Time": ""
+            }
 
-                new_row = {
-                    "Request Date": str(datetime.now()),
-                    "VIN": vin,
-                    "State": state,
-                    "Dealer Code": dealer,
-                    "Vahan Status": "Pending",
-                    "Vahan Tagged By": "",
-                    "Vahan Remarks": "",
-                    "Vahan Update Time": "",
-                    "Forward To Lumax": "No",
-                    "Lumax Forward Time": "",
-                    "State Backend Status": "Pending",
-                    "State Tagged By": "",
-                    "State Remarks": "",
-                    "State Update Time": ""
-                }
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+            save_data(df)
 
-                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                save_data(df)
+            st.success("Request Added")
 
-                st.success("Request Added")
-
-            else:
-                st.error("VIN required")
-
-    with c2:
-        if st.button("Clear"):
-            st.rerun()
+        else:
+            st.error("VIN required")
 
     st.dataframe(df.tail(20), use_container_width=True)
 
