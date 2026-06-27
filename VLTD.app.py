@@ -12,7 +12,7 @@ from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
-SAVE_FOLDER = r""D:\OneDrive - 太思科技股份有限公司\VLTD tagging Data.xlsx""
+SAVE_FOLDER = "r"D:\OneDrive - 太思科技股份有限公司"""
 
 DATA_FILE = os.path.join(
     SAVE_FOLDER,
