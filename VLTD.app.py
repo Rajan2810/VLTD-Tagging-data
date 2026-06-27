@@ -3,11 +3,25 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime
+import plotly.express as px
+import os
+
+# =========================
+# PAGE CONFIG
+# =========================
+st.set_page_config(page_title="VLTD System", layout="wide")
+
+# =========================
+# NAVIGATION
+# =========================
+page = st.sidebar.selectbox(
+    "Select Page",
+    ["Dashboard", "Add Request", "Vahan Status", "State Backend Status"]
+)
 
 # =========================
 # GOOGLE SHEET CONFIG
 # =========================
-
 SHEET_ID = st.secrets["SHEET_ID"]
 
 scope = [
@@ -16,106 +30,73 @@ scope = [
 ]
 
 def get_client():
-
     creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=scope
     )
-
-    client = gspread.authorize(creds)
-
-    return client
-
+    return gspread.authorize(creds)
 
 # =========================
-# LOAD DATA FROM SHEET
+# COLUMNS
 # =========================
-
-def load_data():
-
-    try:
-
-        client = get_client()
-
-        sheet = client.open_by_key(SHEET_ID).sheet1
-
-        data = sheet.get_all_records()
-
-        return pd.DataFrame(data)
-
-    except:
-
-        return pd.DataFrame(columns=COLUMNS)
-
-
-# =========================
-# SAVE DATA TO SHEET
-# =========================
-
-def save_data(df):
-
-    try:
-
-        client = get_client()
-
-        sheet = client.open_by_key(SHEET_ID).sheet1
-
-        sheet.clear()
-
-        data = [
-            df.columns.tolist()
-        ] + df.fillna("").astype(str).values.tolist()
-
-        sheet.update(data)
-
-        st.success("Data saved to Google Sheet")
-
-    except Exception as e:
-
-        st.error(f"Save failed: {e}")
-
-
-# =========================
-# DEFAULT COLUMNS
-# =========================
-
 COLUMNS = [
-
-    "Request Date",
-    "VIN",
-    "State",
-    "Dealer Code",
-
-    "Vahan Status",
-    "Vahan Tagged By",
-    "Vahan Remarks",
-    "Vahan Update Time",
-
-    "Forward To Lumax",
-    "Lumax Forward Time",
-
-    "State Backend Status",
-    "State Tagged By",
-    "State Remarks",
-    "State Update Time"
-
+    "Request Date", "VIN", "State", "Dealer Code",
+    "Vahan Status", "Vahan Tagged By", "Vahan Remarks", "Vahan Update Time",
+    "Forward To Lumax", "Lumax Forward Time",
+    "State Backend Status", "State Tagged By", "State Remarks", "State Update Time"
 ]
 
-
 # =========================
-# LOAD DATAFRAME
+# LOAD DATA
 # =========================
+def load_data():
+    try:
+        client = get_client()
+        sheet = client.open_by_key(SHEET_ID).sheet1
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        return df
+    except:
+        return pd.DataFrame(columns=COLUMNS)
 
 df = load_data()
 
-# ensure columns exist
 for c in COLUMNS:
     if c not in df.columns:
         df[c] = ""
 
 df = df.fillna("")
-# DASHBOARD# ==================================
 
+# =========================
+# SAVE DATA
+# =========================
+def save_data(df):
+    try:
+        client = get_client()
+        sheet = client.open_by_key(SHEET_ID).sheet1
+        sheet.clear()
+
+        data = [df.columns.tolist()] + df.astype(str).values.tolist()
+        sheet.update(data)
+
+    except Exception as e:
+        st.error(f"Save Error: {e}")
+
+# =========================
+# STATES LIST
+# =========================
+ALL_STATES = [
+"Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
+"Goa","Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka",
+"Kerala","Madhya Pradesh","Maharashtra","Manipur","Meghalaya",
+"Mizoram","Nagaland","Odisha","Punjab","Rajasthan","Sikkim",
+"Tamil Nadu","Telangana","Tripura","Uttar Pradesh","Uttarakhand",
+"West Bengal","Delhi","Jammu and Kashmir","Ladakh","Puducherry"
+]
+
+# =========================
+# DASHBOARD
+# =========================
 if page == "Dashboard":
 
     st.title("📊 VLTD Dashboard")
@@ -124,948 +105,170 @@ if page == "Dashboard":
 
     if len(temp):
 
-        temp["Request Date"] = pd.to_datetime(
-            temp["Request Date"],
-            errors="coerce"
-        )
+        temp["Request Date"] = pd.to_datetime(temp["Request Date"], errors="coerce")
 
-        cdate1, cdate2 = st.columns(2)
-
-        with cdate1:
-
-            from_date = st.date_input(
-                "From Date"
-            )
-
-        with cdate2:
-
-            to_date = st.date_input(
-                "To Date"
-            )
+        col1, col2 = st.columns(2)
+        with col1:
+            from_date = st.date_input("From Date")
+        with col2:
+            to_date = st.date_input("To Date")
 
         temp = temp[
-            (
-                temp[
-                    "Request Date"
-                ]
-                .dt.date
-                >= from_date
-            )
-            &
-            (
-                temp[
-                    "Request Date"
-                ]
-                .dt.date
-                <= to_date
-            )
+            (temp["Request Date"].dt.date >= from_date) &
+            (temp["Request Date"].dt.date <= to_date)
         ]
-
 
     c1, c2, c3 = st.columns(3)
 
-    c1.metric(
-        "Total Request",
-        len(temp)
-    )
-
-    c2.metric(
-        "Total Vahan Tagging",
-        (
-            temp[
-                "Vahan Status"
-            ]
-            ==
-            "Complete"
-        ).sum()
-    )
-
-    c3.metric(
-        "Total State Backend Tagging",
-        (
-            temp[
-                "State Backend Status"
-            ]
-            ==
-            "Completed"
-        ).sum()
-    )
-
+    c1.metric("Total Requests", len(temp))
+    c2.metric("Vahan Completed", (temp["Vahan Status"] == "Complete").sum())
+    c3.metric("State Completed", (temp["State Backend Status"] == "Completed").sum())
 
     st.divider()
 
-
-    st.subheader(
-        "State Wise Tagging"
-    )
+    st.subheader("State Wise Chart")
 
     if len(temp):
+        chart = temp.groupby("State").agg({
+            "VIN": "count",
+            "Vahan Status": lambda x: (x == "Complete").sum(),
+            "State Backend Status": lambda x: (x == "Completed").sum()
+        }).reset_index()
 
-        chart = (
+        fig = px.bar(chart, x="State",
+                     y=["Vahan Status", "State Backend Status"],
+                     barmode="group")
 
-            temp.groupby(
-                "State"
-            )
+        st.plotly_chart(fig, use_container_width=True)
 
-            .agg(
+    st.dataframe(temp, use_container_width=True)
 
-            {
-
-            "Vahan Status":
-
-            lambda x:
-            (
-                x=="Complete"
-            ).sum(),
-
-            "State Backend Status":
-
-            lambda x:
-            (
-                x=="Completed"
-            ).sum()
-
-            }
-
-            )
-
-            .reset_index()
-
-        )
-
-        fig = px.bar(
-
-            chart,
-
-            x="State",
-
-            y=[
-
-            "Vahan Status",
-
-            "State Backend Status"
-
-            ],
-
-            barmode="group"
-
-        )
-
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
-
-
-    st.subheader(
-        "Tagged By"
+    st.download_button(
+        "⬇ Download CSV",
+        temp.to_csv(index=False).encode("utf-8"),
+        "VLTD_Data.csv",
+        "text/csv"
     )
 
-    if len(temp):
-
-        tag = (
-
-            temp
-
-            .groupby(
-                "Vahan Tagged By"
-            )
-
-            .size()
-
-            .reset_index(
-                name="Count"
-            )
-
-        )
-
-        fig2 = px.bar(
-
-            tag,
-
-            x="Vahan Tagged By",
-
-            y="Count"
-
-        )
-
-        st.plotly_chart(
-            fig2,
-            use_container_width=True
-        )
-
-
-    st.subheader(
-        "All Requests"
-    )
-
-    st.dataframe(
-        temp,
-        use_container_width=True
-    )
-
-
-    if os.path.exists(FILE):
-
-        st.download_button(
-
-            "⬇ Download Excel",
-
-            open(
-                FILE,
-                "rb"
-            ),
-
-            "VLTD_Tagging_Data.xlsx"
-
-        )
-        # ==================================
+# =========================
 # ADD REQUEST
-# ==================================
-
+# =========================
 elif page == "Add Request":
 
     st.title("➕ Add Request")
 
-    vin = st.text_input(
-        "Enter VIN"
-    )
-
-    state = st.selectbox(
-        "Select State / UT",
-        ALL_STATES
-    )
-
-    dealer = st.text_input(
-        "Enter Dealer Code"
-    )
+    vin = st.text_input("Enter VIN")
+    state = st.selectbox("Select State", ALL_STATES)
+    dealer = st.text_input("Enter Dealer Code")
 
     c1, c2 = st.columns(2)
 
     with c1:
+        if st.button("Submit"):
 
-        if st.button(
-            "Submit"
-        ):
+            if vin:
 
-            vin = vin.strip()
-            dealer = dealer.strip()
+                new_row = {
+                    "Request Date": str(datetime.now()),
+                    "VIN": vin,
+                    "State": state,
+                    "Dealer Code": dealer,
+                    "Vahan Status": "Pending",
+                    "Vahan Tagged By": "",
+                    "Vahan Remarks": "",
+                    "Vahan Update Time": "",
+                    "Forward To Lumax": "No",
+                    "Lumax Forward Time": "",
+                    "State Backend Status": "Pending",
+                    "State Tagged By": "",
+                    "State Remarks": "",
+                    "State Update Time": ""
+                }
 
-            if not vin:
+                df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                save_data(df)
 
-                st.error(
-                    "VIN required"
-                )
+                st.success("Request Added")
 
             else:
-
-                duplicate = (
-
-                    df[
-                        "VIN"
-                    ]
-                    .astype(str)
-
-                    .str.upper()
-
-                    ==
-                    vin.upper()
-
-                ).any()
-
-                if duplicate:
-
-                    st.warning(
-                        "VIN already exists"
-                    )
-
-                else:
-
-                    row = {
-
-                    "Request Date":
-                    str(
-                    datetime.now()
-                    ),
-
-                    "VIN":
-                    vin,
-
-                    "State":
-                    state,
-
-                    "Dealer Code":
-                    dealer,
-
-                    "Vahan Status":
-                    "Pending",
-
-                    "Vahan Tagged By":
-                    "",
-
-                    "Vahan Remarks":
-                    "",
-
-                    "Vahan Update Time":
-                    "",
-
-                    "Forward To Lumax":
-                    "No",
-
-                    "Lumax Forward Time":
-                    "",
-
-                    "State Backend Status":
-                    "Pending",
-
-                    "State Tagged By":
-                    "",
-
-                    "State Remarks":
-                    "",
-
-                    "State Update Time":
-                    ""
-
-                    }
-
-                    df = pd.concat(
-
-                        [
-
-                        df,
-
-                        pd.DataFrame(
-                            [row]
-                        )
-
-                        ],
-
-                        ignore_index=True
-
-                    )
-
-                    save_data(
-                        df
-                    )
-
-                    st.success(
-                        "Request Added"
-                    )
-
+                st.error("VIN required")
 
     with c2:
-
-        if st.button(
-            "Clear"
-        ):
-
+        if st.button("Clear"):
             st.rerun()
 
+    st.dataframe(df.tail(20), use_container_width=True)
 
-    st.divider()
-
-    st.subheader(
-        "Recent Requests"
-    )
-
-    show = df[
-
-        [
-
-        "Request Date",
-
-        "VIN",
-
-        "State",
-
-        "Dealer Code",
-
-        "Vahan Status"
-
-        ]
-
-    ]
-
-    st.dataframe(
-
-        show.tail(20),
-
-        use_container_width=True
-
-    )
-    # ==================================
-# ==================================
+# =========================
 # VAHAN STATUS
-# ==================================
-
+# =========================
 elif page == "Vahan Status":
 
     st.title("🚗 Vahan Status")
 
-    pending = df[
+    pending = df[df["Forward To Lumax"].astype(str) != "Yes"].copy()
 
-        df[
-            "Forward To Lumax"
-        ]
+    st.dataframe(pending, use_container_width=True)
 
-        .astype(str)
+    selected_vin = st.multiselect("Select VIN", pending["VIN"].tolist())
 
-        .str.strip()
+    status = st.selectbox("Status", ["Pending", "Complete"])
+    tag = st.selectbox("Tagged By", ["Rajan", "Vishal", "Lumax Team"])
 
-        !=
+    remarks = st.text_area("Remarks") if status == "Pending" else ""
 
-        "Yes"
+    if st.button("Update"):
 
-    ].copy()
+        mask = df["VIN"].isin(selected_vin)
 
+        df.loc[mask, "Vahan Status"] = status
+        df.loc[mask, "Vahan Tagged By"] = tag
+        df.loc[mask, "Vahan Remarks"] = remarks
+        df.loc[mask, "Vahan Update Time"] = str(datetime.now())
 
-    st.subheader(
-        "Vahan Requests"
-    )
+        save_data(df)
+        st.success("Updated")
 
+    if st.button("Forward To Lumax"):
 
-    if len(pending) == 0:
+        mask = df["VIN"].isin(selected_vin)
 
-        st.info(
-            "No records available"
-        )
+        df.loc[mask, "Forward To Lumax"] = "Yes"
+        df.loc[mask, "Lumax Forward Time"] = str(datetime.now())
+        df.loc[mask, "Vahan Status"] = "Complete"
 
-    else:
+        save_data(df)
+        st.success("Forwarded")
 
-        pending = pending.reset_index()
-
-        pending["Select"] = False
-
-
-        selected = st.data_editor(
-
-            pending[
-
-                [
-
-                "Select",
-
-                "Request Date",
-
-                "VIN",
-
-                "State",
-
-                "Dealer Code",
-
-                "Vahan Status",
-
-                "Vahan Tagged By"
-
-                ]
-
-            ],
-
-            hide_index=True,
-
-            use_container_width=True
-
-        )
-
-
-        selected_rows = (
-
-            selected[
-
-                selected[
-                    "Select"
-                ]
-
-            ]
-
-            .index
-
-            .tolist()
-
-        )
-
-
-        selected_vin = (
-
-            pending
-
-            .loc[
-                selected_rows,
-                "VIN"
-            ]
-
-            .tolist()
-
-        )
-
-
-        st.write(
-            "Selected VIN:",
-            len(
-                selected_vin
-            )
-        )
-
-
-        status = st.selectbox(
-
-            "Vahan Status",
-
-            [
-
-            "Pending",
-
-            "Complete"
-
-            ]
-
-        )
-
-
-        tag = st.selectbox(
-
-            "Tagged By",
-
-            [
-
-            "Rajan",
-
-            "Vishal",
-
-            "Lumax Team"
-
-            ]
-
-        )
-
-
-        remarks = ""
-
-
-        if status == "Pending":
-
-            remarks = st.text_area(
-                "Remarks"
-            )
-
-
-        c1, c2 = st.columns(2)
-
-
-        with c1:
-
-            if st.button(
-                "Update Status"
-            ):
-
-                if not selected_vin:
-
-                    st.warning(
-                        "Select VIN"
-                    )
-
-                else:
-
-                    mask = (
-
-                        df[
-                            "VIN"
-                        ]
-
-                        .isin(
-                            selected_vin
-                        )
-
-                    )
-
-
-                    df.loc[
-                        mask,
-                        "Vahan Status"
-                    ] = status
-
-
-                    df.loc[
-                        mask,
-                        "Vahan Tagged By"
-                    ] = tag
-
-
-                    df.loc[
-                        mask,
-                        "Vahan Remarks"
-                    ] = remarks
-
-
-                    df.loc[
-                        mask,
-                        "Vahan Update Time"
-                    ] = str(
-                        datetime.now()
-                    )
-
-
-                    save_data(
-                        df
-                    )
-
-                    st.success(
-                        "Status Updated"
-                    )
-
-                    st.rerun()
-
-
-        with c2:
-
-            if st.button(
-                "Forward To Lumax"
-            ):
-
-                if not selected_vin:
-
-                    st.warning(
-                        "Select VIN"
-                    )
-
-                else:
-
-                    mask = (
-
-                        df[
-                            "VIN"
-                        ]
-
-                        .isin(
-                            selected_vin
-                        )
-
-                    )
-
-
-                    df.loc[
-                        mask,
-                        "Forward To Lumax"
-                    ] = "Yes"
-
-
-                    df.loc[
-                        mask,
-                        "Lumax Forward Time"
-                    ] = str(
-                        datetime.now()
-                    )
-
-
-                    df.loc[
-                        mask,
-                        "Vahan Status"
-                    ] = "Complete"
-
-
-                    save_data(
-                        df
-                    )
-
-                    st.success(
-                        "Forwarded To Lumax"
-                    )
-
-                    st.rerun()
-
-
-        st.divider()
-
-
-        st.subheader(
-            "Current Vahan List"
-        )
-
-
-        st.dataframe(
-
-            pending[
-
-                [
-
-                "Request Date",
-
-                "VIN",
-
-                "State",
-
-                "Dealer Code",
-
-                "Vahan Status",
-
-                "Vahan Tagged By",
-
-                "Vahan Remarks"
-
-                ]
-
-            ],
-
-            use_container_width=True
-
-        )        # ==================================
-# STATE BACKEND STATUS
-# ==================================
-
+# =========================
+# STATE BACKEND
+# =========================
 elif page == "State Backend Status":
 
-    st.title("🏢 State Backend Status")
+    st.title("🏢 State Backend")
 
     pending = df[
-
-        (
-            df[
-                "Forward To Lumax"
-            ]
-            .astype(str)
-            .str.strip()
-            ==
-            "Yes"
-        )
-
-        &
-
-        (
-            df[
-                "State Backend Status"
-            ]
-            .astype(str)
-            .str.strip()
-            ==
-            "Pending"
-        )
-
+        (df["Forward To Lumax"].astype(str) == "Yes") &
+        (df["State Backend Status"].astype(str) == "Pending")
     ].copy()
 
+    st.dataframe(pending, use_container_width=True)
 
-    st.subheader(
-        "Pending State Backend Requests"
-    )
+    selected_vin = st.multiselect("Select VIN", pending["VIN"].tolist())
 
+    status = st.selectbox("Status", ["Pending", "Completed"])
+    tag = st.selectbox("Tagged By", ["Rajan", "Vishal", "Lumax Team"])
 
-    if len(pending) == 0:
+    remarks = st.text_area("Remarks") if status == "Pending" else ""
 
-        st.info(
-            "No pending VIN"
-        )
+    if st.button("Update State"):
 
+        mask = df["VIN"].isin(selected_vin)
 
-    else:
+        df.loc[mask, "State Backend Status"] = status
+        df.loc[mask, "State Tagged By"] = tag
+        df.loc[mask, "State Remarks"] = remarks
+        df.loc[mask, "State Update Time"] = str(datetime.now())
 
-        pending = pending.reset_index()
-
-        pending["Select"] = False
-
-
-        selected_table = st.data_editor(
-
-            pending[
-
-                [
-
-                "Select",
-
-                "Request Date",
-
-                "VIN",
-
-                "State",
-
-                "Dealer Code",
-
-                "Vahan Tagged By",
-
-                "Forward To Lumax"
-
-                ]
-
-            ],
-
-            hide_index=True,
-
-            use_container_width=True
-
-        )
-
-
-        selected_rows = (
-
-            selected_table[
-                selected_table[
-                    "Select"
-                ]
-            ]
-
-            .index
-
-            .tolist()
-
-        )
-
-
-        selected_vin = (
-
-            pending
-
-            .loc[
-                selected_rows,
-                "VIN"
-            ]
-
-            .tolist()
-
-        )
-
-
-        st.write(
-            "Selected:",
-            len(
-                selected_vin
-            )
-        )
-
-
-        tag = st.selectbox(
-
-            "Tagged By",
-
-            [
-
-            "Rajan",
-
-            "Vishal",
-
-            "Lumax Team"
-
-            ]
-
-        )
-
-
-        status = st.selectbox(
-
-            "State Status",
-
-            [
-
-            "Pending",
-
-            "Completed"
-
-            ]
-
-        )
-
-
-        remarks = ""
-
-        if status == "Pending":
-
-            remarks = st.text_area(
-                "Remarks"
-            )
-
-
-        if st.button(
-            "Update State Status"
-        ):
-
-            if not selected_vin:
-
-                st.warning(
-                    "Select VIN"
-                )
-
-            else:
-
-                mask = (
-
-                    df[
-                        "VIN"
-                    ]
-
-                    .isin(
-                        selected_vin
-                    )
-
-                )
-
-
-                df.loc[
-                    mask,
-                    "State Backend Status"
-                ] = status
-
-
-                df.loc[
-                    mask,
-                    "State Tagged By"
-                ] = str(
-                    tag
-                )
-
-
-                df.loc[
-                    mask,
-                    "State Remarks"
-                ] = remarks
-
-
-                df.loc[
-                    mask,
-                    "State Update Time"
-                ] = str(
-                    datetime.now()
-                )
-
-
-                save_data(
-                    df
-                )
-
-                st.success(
-                    "Updated"
-                )
-
-                st.rerun()
-
-
-        st.divider()
-
-
-        st.subheader(
-            "Pending List"
-        )
-
-
-        st.dataframe(
-
-            pending[
-
-                [
-
-                "Request Date",
-
-                "VIN",
-
-                "State",
-
-                "Dealer Code",
-
-                "Vahan Tagged By",
-
-                "State Backend Status"
-
-                ]
-
-            ],
-
-            use_container_width=True
-
-        )
+        save_data(df)
+        st.success("Updated")
