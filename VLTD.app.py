@@ -53,6 +53,27 @@ def save_data(data):
 
     # SAVE EXCEL
 
+   def save_data(data):
+
+    # SAVE JSON
+
+    with open(
+        DATA_FILE,
+        "w",
+        encoding="utf-8"
+    ) as f:
+
+        json.dump(
+            data,
+            f,
+            indent=4,
+            ensure_ascii=False
+        )
+
+
+
+    # SAVE EXCEL
+
     wb = openpyxl.Workbook()
 
     ws = wb.active
@@ -129,79 +150,10 @@ def save_data(data):
         print(
             "Uploaded to OneDrive"
         )
-
-  
-
-
-# ========= UPDATE THESE =========
-
-TENANT_ID = "YOUR_TENANT_ID"
-
-CLIENT_ID = "YOUR_CLIENT_ID"
-
-CLIENT_SECRET = "YOUR_CLIENT_SECRET"
-
-ONEDRIVE_FILE = "/VLTD Tagging data.xlsx"
-
-
-def upload_to_onedrive(local_file):
-
-
-
-# ================= SECRETS =================
-
-TENANT_ID = st.secrets["b72f33b9-b661-435e-a734-9aa9d261dc3aD"]
-
-CLIENT_ID = st.secrets["747e7a9b-6ec3-4e01-b757-155943ad144c"]
-
-CLIENT_SECRET = st.secrets["d152c348-876f-41f2-ac11-20066e494e76"]
-
-ONEDRIVE_FILE = st.secrets[""D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx""]
-
-
-# ================= UPLOAD =================
-
-def upload_to_onedrive(local_file):
-
-    try:
-
-        credentials = ClientCredential(
-            CLIENT_ID,
-            CLIENT_SECRET
+    else:
+        print(
+            "Upload failed"
         )
-
-        client = GraphClient(
-            TENANT_ID,
-            credentials
-        )
-
-        with open(local_file, "rb") as f:
-            content = f.read()
-
-        (
-            client
-            .me
-            .drive
-            .root
-            .get_by_path(
-                ONEDRIVE_FILE
-            )
-            .upload(
-                content
-            )
-            .execute_query()
-        )
-
-        return True
-
-
-    except Exception as e:
-
-        st.error(
-            f"Upload failed: {e}"
-        )
-
-        return False
         )# ================= UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
