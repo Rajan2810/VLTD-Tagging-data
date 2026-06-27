@@ -71,10 +71,18 @@ def load_data():
 
 def save_data(data):
 
+    # Save JSON
     with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+        json.dump(
+            data,
+            f,
+            indent=4,
+            ensure_ascii=False
+        )
 
+    # Save Excel
     wb = openpyxl.Workbook()
+
     ws = wb.active
     ws.title = "VLTD Tagging"
 
@@ -97,6 +105,7 @@ def save_data(data):
     ws.append(headers)
 
     for r in data:
+
         ws.append([
             r.get("id"),
             r.get("vin"),
@@ -113,11 +122,12 @@ def save_data(data):
             r.get("closure_date")
         ])
 
-  wb.save(EXCEL_FILE)
+    wb.save(EXCEL_FILE)
 
-upload_to_onedrive(
-    EXCEL_FILE
-)
+    # Upload to OneDrive
+    upload_to_onedrive(
+        EXCEL_FILE
+    )
 
 
 # ================= UI =================
