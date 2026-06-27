@@ -1,8 +1,6 @@
-streamlit
-pandas
+streamlit==1.36.0
+pandas==2.2.2
+gspread==6.0.2
+google-auth
+plotly
 openpyxl
-pytz
-gunicorn
-google-auth
-gspread
-google-auth
