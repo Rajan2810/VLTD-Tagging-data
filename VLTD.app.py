@@ -30,11 +30,10 @@ scope = [
 ]
 
 def get_client():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=scope
-    )
-    return gspread.authorize(creds)
+ creds = Credentials.from_service_account_file(
+    "service_account.json",
+    scopes=scope
+)
 
 # =========================
 # COLUMNS
