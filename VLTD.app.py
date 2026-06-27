@@ -523,6 +523,7 @@ elif page == "Add Request":
 
     )
     # ==================================
+# ==================================
 # VAHAN STATUS
 # ==================================
 
@@ -531,23 +532,31 @@ elif page == "Vahan Status":
     st.title("🚗 Vahan Status")
 
     pending = df[
-        (
-            df["Vahan Status"]
-            .astype(str)
-            .str.strip()
-            ==
-            "Pending"
-        )
+
+        df[
+            "Forward To Lumax"
+        ]
+
+        .astype(str)
+
+        .str.strip()
+
+        !=
+
+        "Yes"
+
     ].copy()
 
+
     st.subheader(
-        "Pending Requests"
+        "Vahan Requests"
     )
+
 
     if len(pending) == 0:
 
         st.info(
-            "No pending VIN available"
+            "No records available"
         )
 
     else:
@@ -556,9 +565,11 @@ elif page == "Vahan Status":
 
         pending["Select"] = False
 
-        selected_table = st.data_editor(
+
+        selected = st.data_editor(
 
             pending[
+
                 [
 
                 "Select",
@@ -573,7 +584,7 @@ elif page == "Vahan Status":
 
                 "Vahan Status",
 
-                "Forward To Lumax"
+                "Vahan Tagged By"
 
                 ]
 
@@ -586,11 +597,21 @@ elif page == "Vahan Status":
         )
 
 
-        selected_index = selected_table[
-            selected_table[
-                "Select"
+        selected_rows = (
+
+            selected[
+
+                selected[
+                    "Select"
+                ]
+
             ]
-        ].index.tolist()
+
+            .index
+
+            .tolist()
+
+        )
 
 
         selected_vin = (
@@ -598,7 +619,7 @@ elif page == "Vahan Status":
             pending
 
             .loc[
-                selected_index,
+                selected_rows,
                 "VIN"
             ]
 
@@ -608,7 +629,7 @@ elif page == "Vahan Status":
 
 
         st.write(
-            "Selected:",
+            "Selected VIN:",
             len(
                 selected_vin
             )
@@ -636,7 +657,7 @@ elif page == "Vahan Status":
 
             [
 
-            "Rahan",
+            "Rajan",
 
             "Vishal",
 
@@ -648,6 +669,7 @@ elif page == "Vahan Status":
 
 
         remarks = ""
+
 
         if status == "Pending":
 
@@ -685,6 +707,7 @@ elif page == "Vahan Status":
 
                     )
 
+
                     df.loc[
                         mask,
                         "Vahan Status"
@@ -694,9 +717,13 @@ elif page == "Vahan Status":
                     df.loc[
                         mask,
                         "Vahan Tagged By"
-                    ] = str(
-                        tag
-                    )
+                    ] = tag
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Remarks"
+                    ] = remarks
 
 
                     df.loc[
@@ -707,20 +734,12 @@ elif page == "Vahan Status":
                     )
 
 
-                    if status == "Pending":
-
-                        df.loc[
-                            mask,
-                            "Vahan Remarks"
-                        ] = remarks
-
-
                     save_data(
                         df
                     )
 
                     st.success(
-                        "Updated"
+                        "Status Updated"
                     )
 
                     st.rerun()
@@ -728,68 +747,69 @@ elif page == "Vahan Status":
 
         with c2:
 
-            if status == "Complete":
+            if st.button(
+                "Forward To Lumax"
+            ):
 
-                if st.button(
-                    "Forward To Lumax"
-                ):
+                if not selected_vin:
 
-                    if not selected_vin:
+                    st.warning(
+                        "Select VIN"
+                    )
 
-                        st.warning(
-                            "Select VIN"
+                else:
+
+                    mask = (
+
+                        df[
+                            "VIN"
+                        ]
+
+                        .isin(
+                            selected_vin
                         )
 
-                    else:
-
-                        mask = (
-
-                            df[
-                                "VIN"
-                            ]
-
-                            .isin(
-                                selected_vin
-                            )
-
-                        )
-
-                        df.loc[
-                            mask,
-                            "Vahan Status"
-                        ] = "Complete"
+                    )
 
 
-                        df.loc[
-                            mask,
-                            "Forward To Lumax"
-                        ] = "Yes"
+                    df.loc[
+                        mask,
+                        "Forward To Lumax"
+                    ] = "Yes"
 
 
-                        df.loc[
-                            mask,
-                            "Lumax Forward Time"
-                        ] = str(
-                            datetime.now()
-                        )
+                    df.loc[
+                        mask,
+                        "Lumax Forward Time"
+                    ] = str(
+                        datetime.now()
+                    )
 
 
-                        save_data(
-                            df
-                        )
+                    df.loc[
+                        mask,
+                        "Vahan Status"
+                    ] = "Complete"
 
-                        st.success(
-                            "Forwarded To Lumax"
-                        )
 
-                        st.rerun()
+                    save_data(
+                        df
+                    )
+
+                    st.success(
+                        "Forwarded To Lumax"
+                    )
+
+                    st.rerun()
 
 
         st.divider()
 
+
         st.subheader(
-            "Current Pending Data"
+            "Current Vahan List"
         )
+
 
         st.dataframe(
 
@@ -805,6 +825,8 @@ elif page == "Vahan Status":
 
                 "Dealer Code",
 
+                "Vahan Status",
+
                 "Vahan Tagged By",
 
                 "Vahan Remarks"
@@ -815,8 +837,7 @@ elif page == "Vahan Status":
 
             use_container_width=True
 
-        )
-        # ==================================
+        )        # ==================================
 # STATE BACKEND STATUS
 # ==================================
 
@@ -944,7 +965,7 @@ elif page == "State Backend Status":
 
             [
 
-            "Rahan",
+            "Rajan",
 
             "Vishal",
 
