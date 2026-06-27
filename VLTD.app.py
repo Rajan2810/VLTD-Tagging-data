@@ -30,7 +30,7 @@ def load_data():
     return []
 
 
-# ================= ONEDRIVE UPLOAD =================
+# ================= ONEDRIVE UPLOAD (FIXED) =================
 
 def upload_to_onedrive(local_file):
     try:
@@ -44,7 +44,8 @@ def upload_to_onedrive(local_file):
             credentials
         )
 
-        target_path = st.secrets["ONEDRIVE_FILE"].replace("\x00", "")
+        # ✅ FIX: clean hidden null bytes + whitespace
+        target_path = str(st.secrets["ONEDRIVE_FILE"]).strip().replace("\x00", "")
 
         with open(local_file, "rb") as f:
             content = f.read()
@@ -63,7 +64,7 @@ def upload_to_onedrive(local_file):
         return False
 
 
-# ================= SAVE =================
+# ================= SAVE DATA =================
 
 def save_data(data):
 
@@ -102,10 +103,12 @@ def save_data(data):
         ])
 
     wb.save(EXCEL_FILE)
+
+    # upload after save
     upload_to_onedrive(EXCEL_FILE)
 
 
-# ================= APP =================
+# ================= UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
 st.title("🚗 VLTD Tagging System")
@@ -127,7 +130,7 @@ if menu == "Dashboard":
     df = pd.DataFrame(data)
 
     if df.empty:
-        st.warning("No data found")
+        st.warning("No data available")
         st.stop()
 
     st.dataframe(df, use_container_width=True)
@@ -166,11 +169,11 @@ elif menu == "Add Request":
         st.rerun()
 
 
-# ================= VAHAN STATUS (WITH CHECKBOX SELECTION) =================
+# ================= VAHAN STATUS (CHECKBOX BULK ACTION) =================
 
 elif menu == "Vahan Status":
 
-    st.subheader("🚘 Vahan Status - Select Records")
+    st.subheader("🚘 Vahan Status - Bulk Actions")
 
     df = pd.DataFrame(data)
 
@@ -180,15 +183,13 @@ elif menu == "Vahan Status":
 
     selected_ids = []
 
-    st.write("### Select Records:")
+    st.write("### Select Records")
 
-    for i, row in df.iterrows():
-        checked = st.checkbox(
-            f"ID {row['id']} | VIN: {row['vin']} | Status: {row['vahan_status']}",
+    for _, row in df.iterrows():
+        if st.checkbox(
+            f"ID {row['id']} | VIN {row['vin']} | Status {row['vahan_status']}",
             key=f"chk_{row['id']}"
-        )
-
-        if checked:
+        ):
             selected_ids.append(row["id"])
 
     st.markdown("---")
@@ -209,30 +210,29 @@ elif menu == "Vahan Status":
                     r["remarks"] = remarks
 
             save_data(data)
-            st.success("Selected records updated")
-
+            st.success("Updated successfully")
 
     st.markdown("---")
 
-    if st.button("Forward Selected to Lumax"):
+    if st.button("Forward Selected To Lumax"):
 
         if not selected_ids:
             st.error("No records selected")
 
         else:
-            success = False
+            ok = False
 
             for r in data:
                 if r["id"] in selected_ids:
                     if r["vahan_status"] == "Done":
                         r["forwarded_to_lumax"] = True
                         r["forwarded_time"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-                        success = True
+                        ok = True
 
             save_data(data)
 
-            if success:
-                st.success("Selected records forwarded")
+            if ok:
+                st.success("Forwarded successfully")
             else:
                 st.error("Only 'Done' records can be forwarded")
 
@@ -248,7 +248,7 @@ elif menu == "Backend Status":
 
     selected_ids = []
 
-    for i, row in df.iterrows():
+    for _, row in df.iterrows():
         if st.checkbox(f"Select ID {row['id']}", key=f"b_{row['id']}"):
             selected_ids.append(row["id"])
 
