@@ -12,7 +12,7 @@ from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
-SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
+SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司"
 
 DATA_FILE = os.path.join(
     SAVE_FOLDER,
@@ -21,7 +21,7 @@ DATA_FILE = os.path.join(
 
 EXCEL_FILE = os.path.join(
     SAVE_FOLDER,
-    "VLTD Tagging data.xlsx"
+    "VLTD tagging Data.xlsx"
 )
 
 IST = pytz.timezone(
