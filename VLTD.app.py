@@ -112,3 +112,51 @@ if os.path.exists(FILE):
             f,
             "VLTD_Tagging_Data.xlsx"
         )
+import streamlit as st
+import pandas as pd
+import os
+from datetime import datetime
+
+FILE = r"D:\OneDrive - 太思科技股份有限公司\VLTD tagging Data.xlsx"
+
+st.title("➕ Add Request")
+
+states = [
+"Delhi","Haryana","UP","Punjab","Rajasthan","Bihar","MP",
+"Maharashtra","Tamil Nadu","Karnataka","Kerala","Gujarat"
+]
+
+vin = st.text_input("Enter VIN")
+state = st.selectbox("Select State", states)
+dealer = st.text_input("Enter Dealer Code")
+
+def load_data():
+    if os.path.exists(FILE):
+        return pd.read_excel(FILE)
+    return pd.DataFrame()
+
+if st.button("Submit"):
+
+    df = load_data()
+
+    new_row = {
+        "Request Date": datetime.now(),
+        "VIN": vin,
+        "State": state,
+        "Dealer Code": dealer,
+        "Vahan Status": "Pending",
+        "Vahan Tagged By": "",
+        "Vahan Remarks": "",
+        "State Backend Status": "Pending",
+        "State Tagged By": "",
+        "State Remarks": "",
+        "Forward To Lumax": "No"
+    }
+
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    df.to_excel(FILE, index=False)
+
+    st.success("Request Added Successfully")
+
+if st.button("Clear"):
+    st.rerun()
