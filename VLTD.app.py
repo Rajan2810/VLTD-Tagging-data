@@ -122,7 +122,11 @@ def save_data(data):
             r.get("closure_date")
         ])
 
-    wb.save(EXCEL_FILE)
+    st.write("Excel saved:", EXCEL_FILE)
+
+result = upload_to_onedrive(EXCEL_FILE)
+
+st.write("Upload status:", result)
 
     # Upload to OneDrive
 # ================= ONEDRIVE UPLOAD =================
