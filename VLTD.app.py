@@ -15,7 +15,7 @@ from office365.runtime.auth.client_credential import ClientCredential
 SAVE_FOLDER = "data"
 os.makedirs(SAVE_FOLDER, exist_ok=True)
 
-DATA_FILE = os.path.join(SAVE_FOLDER, "tagging_requests.json")
+DATA_FILE = os.path.join(SAVE_FOLDER, "vltd_data.json")
 EXCEL_FILE = os.path.join(SAVE_FOLDER, "VLTD_tagging.xlsx")
 
 IST = pytz.timezone("Asia/Kolkata")
@@ -30,55 +30,25 @@ def load_data():
     return []
 
 
-# ================= ONEDRIVE UPLOAD =================
-
-def upload_to_onedrive(local_file):
-    try:
-        credentials = ClientCredential(
-            st.secrets["CLIENT_ID"],
-            st.secrets["CLIENT_SECRET"]
-        )
-
-        client = GraphClient(
-            st.secrets["TENANT_ID"],
-            credentials
-        )
-
-        with open(local_file, "rb") as f:
-            content = f.read()
-
-        (
-            client.me.drive.root
-            .get_by_path(st.secrets["ONEDRIVE_FILE"])
-            .upload(content)
-            .execute_query()
-        )
-
-        return True
-
-    except Exception as e:
-        st.error(f"Upload failed: {e}")
-        return False
-
-
 # ================= SAVE DATA =================
 
 def save_data(data):
 
-    # ---------- Save JSON ----------
+    # ---------- JSON SAVE ----------
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-    # ---------- Save Excel ----------
+    # ---------- EXCEL SAVE ----------
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "VLTD Tagging"
 
     headers = [
         "ID", "VIN", "State", "Dealer Code", "Request Date",
-        "Vahan Status", "Vahan tagged by", "Forwarded to Lumax",
-        "Forwarded Time", "Remarks", "Tagging Status",
-        "Statebackend tagged by", "Closure Date"
+        "Vahan Status", "Vahan Tagged By",
+        "Forwarded To Lumax", "Forwarded Time",
+        "Remarks", "Tagging Status",
+        "Backend Tagged By", "Closure Date"
     ]
 
     ws.append(headers)
@@ -102,24 +72,60 @@ def save_data(data):
 
     wb.save(EXCEL_FILE)
 
-    st.write("Excel saved:", EXCEL_FILE)
-
-    # ---------- Upload ----------
-    result = upload_to_onedrive(EXCEL_FILE)
-    st.write("Upload status:", result)
+    upload_to_onedrive(EXCEL_FILE)
 
 
-# ================= UI =================
+# ================= ONEDRIVE UPLOAD =================
+
+def upload_to_onedrive(local_file):
+
+    try:
+        credentials = ClientCredential(
+            st.secrets["CLIENT_ID"],
+            st.secrets["CLIENT_SECRET"]
+        )
+
+        client = GraphClient(
+            st.secrets["TENANT_ID"],
+            credentials
+        )
+
+        target_path = st.secrets["ONEDRIVE_FILE"]
+
+        with open(local_file, "rb") as f:
+            content = f.read()
+
+        (
+            client.me.drive.root
+            .get_by_path(target_path)
+            .upload_file(content)   # ✅ FIXED METHOD
+            .execute_query()
+        )
+
+        return True
+
+    except Exception as e:
+        st.error(f"Upload failed: {e}")
+        return False
+
+
+# ================= APP UI =================
 
 st.set_page_config(page_title="VLTD Tagging", layout="wide")
-st.title("VLTD Tagging System")
+st.title("🚗 VLTD Tagging System")
 
 data = load_data()
 
 menu = st.sidebar.selectbox(
     "Menu",
-    ["Dashboard", "Add Request", "Bulk Upload",
-     "Vahan Status", "Backend Status", "Download Data"]
+    [
+        "Dashboard",
+        "Add Request",
+        "Bulk Upload",
+        "Vahan Status",
+        "Backend Status",
+        "Download Data"
+    ]
 )
 
 
@@ -127,7 +133,7 @@ menu = st.sidebar.selectbox(
 
 if menu == "Dashboard":
 
-    st.subheader("Dashboard")
+    st.subheader("📊 Dashboard")
 
     df = pd.DataFrame(data)
 
@@ -139,10 +145,9 @@ if menu == "Dashboard":
 
     st.dataframe(df, use_container_width=True)
 
-    csv = df.to_csv(index=False)
     st.download_button(
-        "Download CSV",
-        csv,
+        "⬇ Download CSV",
+        df.to_csv(index=False),
         file_name="dashboard.csv",
         mime="text/csv"
     )
@@ -152,18 +157,18 @@ if menu == "Dashboard":
 
 elif menu == "Add Request":
 
-    st.subheader("Add Request")
+    st.subheader("➕ Add Request")
 
     vin = st.text_input("VIN")
     state = st.text_input("State")
     dealer = st.text_input("Dealer Code")
 
-    if st.button("Add"):
+    if st.button("Submit"):
 
         if not vin or not state or not dealer:
-            st.error("Fill all fields")
-        else:
+            st.error("Please fill all fields")
 
+        else:
             data.append({
                 "id": len(data) + 1,
                 "vin": vin,
@@ -181,7 +186,7 @@ elif menu == "Add Request":
             })
 
             save_data(data)
-            st.success("Request Added")
+            st.success("Request added")
             st.rerun()
 
 
@@ -193,7 +198,7 @@ elif menu == "Bulk Upload":
 
     if file:
 
-        if file.name.endswith(".csv"):
+        if file.name.endswith("csv"):
             df = pd.read_csv(file)
         else:
             df = pd.read_excel(file)
@@ -220,48 +225,103 @@ elif menu == "Bulk Upload":
                 })
 
             save_data(data)
-            st.success("Bulk Upload Done")
+            st.success("Bulk upload completed")
 
 
 # ================= VAHAN STATUS =================
 
 elif menu == "Vahan Status":
 
-    st.subheader("Vahan Status")
+    st.subheader("🚘 Vahan Status")
 
-    req = st.number_input("Request ID", min_value=1)
-    status = st.selectbox("Status", ["Pending", "Done"])
+    df = pd.DataFrame(data)
+    st.dataframe(df)
 
-    if st.button("Update"):
+    req = st.number_input("Request ID", min_value=1, step=1)
+
+    status = st.selectbox("Vahan Status", ["Pending", "Done"])
+    remarks = st.text_input("Remarks")
+
+    tagged_by = st.selectbox(
+        "Tagged By",
+        ["Rajan", "Vishal", "Lumax Team"]
+    )
+
+    if st.button("Update Vahan Status"):
+
+        updated = False
 
         for r in data:
             if r["id"] == req:
                 r["vahan_status"] = status
+                r["remarks"] = remarks
+                r["vahan_tagged_by"] = tagged_by
+                updated = True
 
         save_data(data)
-        st.success("Updated")
+
+        if updated:
+            st.success("Updated successfully")
+        else:
+            st.error("Invalid Request ID")
+
+    st.markdown("---")
+
+    st.subheader("📤 Forward to Lumax")
+
+    if st.button("Forward To Lumax"):
+
+        ok = False
+
+        for r in data:
+            if r["id"] == req:
+
+                if r["vahan_status"] == "Done":
+                    r["forwarded_to_lumax"] = True
+                    r["forwarded_time"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+                    ok = True
+
+        save_data(data)
+
+        if ok:
+            st.success("Forwarded successfully")
+        else:
+            st.error("Set Vahan Status = Done first")
 
 
 # ================= BACKEND =================
 
 elif menu == "Backend Status":
 
-    st.subheader("Backend Status")
+    st.subheader("🛠 Backend Status")
 
-    req = st.number_input("Request ID", min_value=1)
+    df = pd.DataFrame([r for r in data if r.get("forwarded_to_lumax")])
+    st.dataframe(df)
+
+    req = st.number_input("Request ID", min_value=1, step=1)
+
     status = st.selectbox("Tagging Status", ["Pending", "Completed"])
+    remarks = st.text_input("Remarks")
 
-    if st.button("Save"):
+    tagged_by = st.selectbox(
+        "Backend Tagged By",
+        ["Rajan", "Vishal", "Lumax Team"]
+    )
+
+    if st.button("Save Backend"):
 
         for r in data:
             if r["id"] == req:
+
                 r["tagging_status"] = status
+                r["remarks"] = remarks
+                r["backend_tagged_by"] = tagged_by
 
                 if status == "Completed":
                     r["closure_date"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
 
         save_data(data)
-        st.success("Updated")
+        st.success("Backend updated")
 
 
 # ================= DOWNLOAD =================
@@ -272,8 +332,8 @@ elif menu == "Download Data":
 
     with open(EXCEL_FILE, "rb") as f:
         st.download_button(
-            "Download Excel",
+            "⬇ Download Excel",
             f,
-            file_name="VLTD.xlsx",
+            file_name="VLTD_tagging.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
