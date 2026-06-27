@@ -306,29 +306,7 @@ if menu == "Dashboard":
 
     )
 
-    # ---------------- TAGGED BY ----------------
-
-    st.subheader(
-        "👤 Tagged By Summary"
-    )
-
-    tagged = (
-
-        filtered_df[
-            "Statebackend_tagged_by"
-        ]
-
-        .fillna(
-            "Not Assigned"
-        )
-
-        .value_counts()
-
-    )
-
-    st.bar_chart(
-        tagged
-    )
+    
 
     # ---------------- DATA TABLE ----------------
 
