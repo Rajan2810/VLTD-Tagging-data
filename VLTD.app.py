@@ -1,42 +1,45 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
+import plotly.express as px
 
-FILE = r"D:\OneDrive - 太思科技股份有限公司\VLTD tagging Data.xlsx"
 
-st.set_page_config(
-    page_title="VLTD Dashboard",
-    layout="wide"
-)
+FILE = "VLTD_Tagging_Data.xlsx"
 
-st.title("VLTD Dashboard")
+
+COLUMNS = [
+
+"Request Date",
+"VIN",
+"State",
+"Dealer Code",
+
+"Vahan Status",
+"Vahan Tagged By",
+"Vahan Remarks",
+"Vahan Update Time",
+
+"Forward To Lumax",
+"Lumax Forward Time",
+
+"State Backend Status",
+"State Tagged By",
+"State Remarks",
+"State Update Time"
+]
 
 
 def load_data():
 
-    columns = [
-        "Request Date",
-        "VIN",
-        "State",
-        "Dealer Code",
-        "Vahan Status",
-        "State Backend Status"
-    ]
-
     if os.path.exists(FILE):
 
-        try:
-            df = pd.read_excel(FILE)
-
-        except:
-            df = pd.DataFrame(
-                columns=columns
-            )
+        df = pd.read_excel(FILE)
 
     else:
 
         df = pd.DataFrame(
-            columns=columns
+            columns=COLUMNS
         )
 
         df.to_excel(
@@ -44,119 +47,420 @@ def load_data():
             index=False
         )
 
-    for col in columns:
+    for c in COLUMNS:
 
-        if col not in df.columns:
-            df[col] = ""
+        if c not in df.columns:
+            df[c] = ""
 
     return df
 
 
+def save_data(df):
+
+    df.to_excel(
+        FILE,
+        index=False,
+        engine="openpyxl"
+    )
+
+
+st.set_page_config(
+    page_title="VLTD Dashboard",
+    layout="wide"
+)
+
 df = load_data()
 
-col1, col2, col3 = st.columns(3)
 
-col1.metric(
-    "Total Request",
-    len(df)
+page = st.sidebar.radio(
+    "Menu",
+    [
+        "Dashboard",
+        "Add Request",
+        "Vahan Status",
+        "State Backend Status"
+    ]
 )
 
-col2.metric(
-    "Vahan Completed",
-    (
-        df["Vahan Status"]
-        .eq("Complete")
-        .sum()
+
+# ===================
+# DASHBOARD
+# ===================
+
+if page == "Dashboard":
+
+    st.title("VLTD Dashboard")
+
+    c1, c2, c3 = st.columns(3)
+
+    c1.metric(
+        "Total Request",
+        len(df)
     )
-)
 
-col3.metric(
-    "State Backend Completed",
-    (
-        df["State Backend Status"]
-        .eq("Completed")
-        .sum()
+    c2.metric(
+        "Vahan Complete",
+        (
+            df["Vahan Status"]
+            == "Complete"
+        ).sum()
     )
-)
 
-st.divider()
+    c3.metric(
+        "State Complete",
+        (
+            df["State Backend Status"]
+            == "Completed"
+        ).sum()
+    )
 
-st.subheader("Pages")
 
-c1, c2, c3 = st.columns(3)
+    if len(df):
 
-with c1:
-    if st.button("Add Request"):
-        st.switch_page(
-            "pages/1_Add_Request.py"
+        chart = (
+            df.groupby(
+                "State"
+            )
+            .agg({
+                "Vahan Status":
+                lambda x:
+                (
+                    x=="Complete"
+                ).sum(),
+
+                "State Backend Status":
+                lambda x:
+                (
+                    x=="Completed"
+                ).sum()
+            })
+
+            .reset_index()
         )
 
-with c2:
-    if st.button("Vahan Status"):
-        st.switch_page(
-            "pages/2_Vahan_Status.py"
+        fig = px.bar(
+            chart,
+            x="State",
+            y=[
+                "Vahan Status",
+                "State Backend Status"
+            ],
+            barmode="group"
         )
 
-with c3:
-    if st.button("State Backend"):
-        st.switch_page(
-            "pages/3_State_Backend_Status.py"
+        st.plotly_chart(
+            fig,
+            use_container_width=True
         )
 
-if os.path.exists(FILE):
 
-    with open(FILE, "rb") as f:
+    st.download_button(
+        "Download Excel",
+        open(FILE,"rb"),
+        "VLTD.xlsx"
+    )
 
-        st.download_button(
-            "Download Excel",
-            f,
-            "VLTD_Tagging_Data.xlsx"
-        )
-        import streamlit as st
-import pandas as pd
-import os
-from datetime import datetime
 
-FILE = r"D:\OneDrive - 太思科技股份有限公司\VLTD tagging Data.xlsx"
+# ===================
+# ADD REQUEST
+# ===================
 
-st.title("➕ Add Request")
+elif page == "Add Request":
 
-states = [
-"Delhi","Haryana","UP","Punjab","Rajasthan","Bihar","MP",
-"Maharashtra","Tamil Nadu","Karnataka","Kerala","Gujarat"
+    st.title("Add Request")
+
+    states = [
+
+"Delhi",
+"Haryana",
+"UP",
+"Punjab",
+"Rajasthan",
+"Maharashtra",
+"Gujarat",
+"Karnataka",
+"Tamil Nadu",
+"Kerala"
+
 ]
 
-vin = st.text_input("Enter VIN")
-state = st.selectbox("Select State", states)
-dealer = st.text_input("Enter Dealer Code")
+    vin = st.text_input(
+        "Enter VIN"
+    )
 
-def load_data():
-    if os.path.exists(FILE):
-        return pd.read_excel(FILE)
-    return pd.DataFrame()
+    state = st.selectbox(
+        "State",
+        states
+    )
 
-if st.button("Submit"):
+    dealer = st.text_input(
+        "Dealer Code"
+    )
 
-    df = load_data()
 
-    new_row = {
-        "Request Date": datetime.now(),
-        "VIN": vin,
-        "State": state,
-        "Dealer Code": dealer,
-        "Vahan Status": "Pending",
-        "Vahan Tagged By": "",
-        "Vahan Remarks": "",
-        "State Backend Status": "Pending",
-        "State Tagged By": "",
-        "State Remarks": "",
-        "Forward To Lumax": "No"
-    }
+    if st.button("Submit"):
 
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    df.to_excel(FILE, index=False)
+        row = {
 
-    st.success("Request Added Successfully")
+            "Request Date":
+            datetime.now(),
 
-if st.button("Clear"):
-    st.rerun()
+            "VIN":
+            vin,
+
+            "State":
+            state,
+
+            "Dealer Code":
+            dealer,
+
+            "Vahan Status":
+            "Pending",
+
+            "Forward To Lumax":
+            "No",
+
+            "State Backend Status":
+            "Pending"
+        }
+
+        df = pd.concat(
+            [
+                df,
+                pd.DataFrame(
+                    [row]
+                )
+            ]
+        )
+
+        save_data(df)
+
+        st.success(
+            "Added"
+        )
+
+
+# ===================
+# VAHAN
+# ===================
+
+elif page == "Vahan Status":
+
+    st.title("Vahan Status")
+
+    pending = df[
+        df[
+            "Vahan Status"
+        ]
+        ==
+        "Pending"
+    ]
+
+
+    selected = st.multiselect(
+        "Select VIN",
+        pending["VIN"]
+    )
+
+
+    status = st.selectbox(
+        "Status",
+        [
+            "Pending",
+            "Complete"
+        ]
+    )
+
+
+    tag = st.selectbox(
+        "Tagged By",
+        [
+            "Rahan",
+            "Vishal",
+            "Lumax Team"
+        ]
+    )
+
+
+    remarks = ""
+
+    if status=="Pending":
+
+        remarks = st.text_area(
+            "Remarks"
+        )
+
+
+    if st.button(
+        "Update"
+    ):
+
+        mask = (
+            df[
+            "VIN"
+            ]
+            .isin(
+            selected
+            )
+        )
+
+
+        df.loc[
+            mask,
+            "Vahan Status"
+        ] = status
+
+
+        df.loc[
+            mask,
+            "Vahan Tagged By"
+        ] = tag
+
+
+        df.loc[
+            mask,
+            "Vahan Update Time"
+        ] = str(
+            datetime.now()
+        )
+
+
+        if status=="Pending":
+
+            df.loc[
+                mask,
+                "Vahan Remarks"
+            ] = remarks
+
+        else:
+
+            df.loc[
+                mask,
+                "Forward To Lumax"
+            ] = "Yes"
+
+
+            df.loc[
+                mask,
+                "Lumax Forward Time"
+            ] = str(
+                datetime.now()
+            )
+
+        save_data(df)
+
+        st.success(
+            "Updated"
+        )
+
+
+# ===================
+# STATE
+# ===================
+
+else:
+
+    st.title(
+        "State Backend"
+    )
+
+    pending = df[
+
+    (
+        df[
+        "Forward To Lumax"
+        ]
+        ==
+        "Yes"
+    )
+
+    &
+
+    (
+        df[
+        "State Backend Status"
+        ]
+        ==
+        "Pending"
+    )
+
+    ]
+
+
+    selected = st.multiselect(
+        "VIN",
+        pending["VIN"]
+    )
+
+
+    status = st.selectbox(
+        "Status",
+        [
+            "Pending",
+            "Completed"
+        ]
+    )
+
+
+    tag = st.selectbox(
+        "Tagged By",
+        [
+            "Rahan",
+            "Vishal",
+            "Lumax Team"
+        ]
+    )
+
+
+    remarks = ""
+
+    if status=="Pending":
+
+        remarks = st.text_area(
+            "Remarks"
+        )
+
+
+    if st.button(
+        "Update"
+    ):
+
+        mask = (
+            df[
+            "VIN"
+            ]
+            .isin(
+            selected
+            )
+        )
+
+        df.loc[
+            mask,
+            "State Backend Status"
+        ] = status
+
+
+        df.loc[
+            mask,
+            "State Tagged By"
+        ] = tag
+
+
+        df.loc[
+            mask,
+            "State Remarks"
+        ] = remarks
+
+
+        df.loc[
+            mask,
+            "State Update Time"
+        ] = str(
+            datetime.now()
+        )
+
+        save_data(df)
+
+        st.success(
+            "Updated"
+        )
