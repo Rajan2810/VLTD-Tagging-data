@@ -12,7 +12,7 @@ from office365.runtime.auth.client_credential import ClientCredential
 
 # ================= CONFIG =================
 
-SASAVE_FOLDER = "D:\\OneDrive - 太思科技股份有限公司"
+SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
 
 DATA_FILE = os.path.join(
     SAVE_FOLDER,
