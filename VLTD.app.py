@@ -21,7 +21,7 @@ page = st.sidebar.selectbox(
 # =========================
 # GOOGLE SHEET CONFIG
 # =========================
-SHEET_ID = st.secrets["1BNu9Do5Hz6DIqyTsRPsPOieBMy8bbXz2_bG8r7z_VTI"]
+SHEET_ID = st.secrets["SHEET_ID"]
 
 scope = [
     "https://www.googleapis.com/auth/spreadsheets",
