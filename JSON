@@ -2,7 +2,7 @@
   "type": "service_account",
   "project_id": "my-project-53554-500711",
   "private_key_id": "539bf73d8fd9ec16da9f303b0d142a556b79c5f6",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC...\n-----END PRIVATE KEY-----\n",
+  "private_key": "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KEY-----\n",
   "client_email": "vltd-streamlit@my-project-53554-500711.iam.gserviceaccount.com",
   "client_id": "109387552189322377729",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
