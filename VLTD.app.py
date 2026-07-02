@@ -62,7 +62,6 @@ ALL_STATES = [
 "Uttar Pradesh",
 "Uttarakhand",
 "West Bengal",
-
 "Andaman and Nicobar",
 "Chandigarh",
 "Dadra and Nagar Haveli",
@@ -664,7 +663,7 @@ elif page == "Vahan Status":
 
             [
 
-            "Rahan",
+            "Rajan",
 
             "Vishal",
 
@@ -973,7 +972,7 @@ elif page == "State Backend Status":
 
             [
 
-            "Rahan",
+            "Rajan",
 
             "Vishal",
 
