@@ -1,1321 +1,1107 @@
 import streamlit as st
-
 import pandas as pd
-
-import openpyxl
-
-import json
-
 import os
-
 from datetime import datetime
-
-import pytz
-
-from office365.graph_client import GraphClient
-
-from office365.runtime.auth.client_credential import ClientCredential
+import plotly.express as px
 
 
-
-# ================= CONFIG =================
-
+FILE = "VLTD_Tagging_Data.xlsx"
 
 
-SAVE_FOLDER = r"D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD"
+COLUMNS = [
+
+"Request Date",
+"VIN",
+"State",
+"Dealer Code",
+
+"Vahan Status",
+"Vahan Tagged By",
+"Vahan Remarks",
+"Vahan Update Time",
+
+"Forward To Lumax",
+"Lumax Forward Time",
+
+"State Backend Status",
+"State Tagged By",
+"State Remarks",
+"State Update Time"
+
+]
 
 
+ALL_STATES = [
 
-os.makedirs(SAVE_FOLDER, exist_ok=True)
+"Andhra Pradesh",
+"Arunachal Pradesh",
+"Assam",
+"Bihar",
+"Chhattisgarh",
+"Delhi",
+"Goa",
+"Gujarat",
+"Haryana",
+"Himachal Pradesh",
+"Jharkhand",
+"Karnataka",
+"Kerala",
+"Madhya Pradesh",
+"Maharashtra",
+"Manipur",
+"Meghalaya",
+"Mizoram",
+"Nagaland",
+"Odisha",
+"Punjab",
+"Rajasthan",
+"Sikkim",
+"Tamil Nadu",
+"Telangana",
+"Tripura",
+"Uttar Pradesh",
+"Uttarakhand",
+"West Bengal",
 
+"Andaman and Nicobar",
+"Chandigarh",
+"Dadra and Nagar Haveli",
+"Daman and Diu",
+"Jammu and Kashmir",
+"Ladakh",
+"Lakshadweep",
+"Puducherry"
 
-
-DATA_FILE = os.path.join(SAVE_FOLDER, "tagging_requests.json")
-
-
-
-EXCEL_FILE = os.path.join(SAVE_FOLDER, "VLTD Tagging data.xlsx")
-
-
-
-IST = pytz.timezone("Asia/Kolkata")
-
-
-
-
-
-# ================= LOAD DATA =================
-
+]
 
 
 def load_data():
 
-    if os.path.exists(DATA_FILE):
-
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-
-            return json.load(f)
-
-    return []
-
-
-
-
-
-# ================= SAVE DATA =================
-
-
-
-def save_data(data):
-
-
-
-    # SAVE JSON
-
-
-
-    with open(
-
-        DATA_FILE,
-
-        "w",
-
-        encoding="utf-8"
-
-    ) as f:
-
-
-
-        json.dump(
-
-            data,
-
-            f,
-
-            indent=4,
-
-            ensure_ascii=False
-
-        )
-
-
-
-
-
-
-
-    # SAVE EXCEL
-
-
-
-    wb = openpyxl.Workbook()
-
-
-
-    ws = wb.active
-
-
-
-    ws.title = "VLTD Tagging"
-
-
-
-    headers = [
-
-
-
-        "ID",
-
-        "VIN",
-
-        "State",
-
-        "Dealer Code",
-
-        "Request Date",
-
-        "Vahan Status",
-
-        "Vahan tagged by",
-
-        "Forwarded to Lumax",
-
-        "Forwarded Time",
-
-        "Remarks",
-
-        "Tagging Status",
-
-        "Statebackend tagged by",
-
-        "Closure Date"
-
-
-
-    ]
-
-
-
-    ws.append(headers)
-
-
-
-    for r in data:
-
-
-
-        ws.append([
-
-
-
-            r.get("id"),
-
-            r.get("vin"),
-
-            r.get("state"),
-
-            r.get("dealer_code"),
-
-            r.get("request_date"),
-
-            r.get("vahan_status"),
-
-            r.get("vahan_tagged_by"),
-
-
-
-            "Yes"
-
-            if r.get(
-
-                "forwarded_to_lumax"
-
-            )
-
-            else "No",
-
-
-
-            r.get("forwarded_time"),
-
-
-
-            r.get("remarks"),
-
-
-
-            r.get(
-
-                "tagging_status"
-
-            ),
-
-
-
-            r.get(
-
-                "backend_tagged_by"
-
-            ),
-
-
-
-            r.get(
-
-                "closure_date"
-
-            )
-
-
-
-        ])
-
-
-
-    wb.save(EXCEL_FILE)
-
-
-
-
-
-
-
-    # UPLOAD TO ONEDRIVE
-
-
-
-    ok = upload_to_onedrive(
-
-        EXCEL_FILE
-
-    )
-
-
-
-    if ok:
-
-        print(
-
-            "Uploaded to OneDrive"
-
+    if os.path.exists(FILE):
+
+        df = pd.read_excel(
+            FILE,
+            dtype=str
         )
 
     else:
 
-        print(
-
-            "Upload failed"
-
-            from office365.graph_client import GraphClient
-
-from office365.runtime.auth.client_credential import ClientCredential
-
-
-
-
-
-# ========= UPDATE THESE =========
-
-
-
-TENANT_ID = "YOUR_TENANT_ID"
-
-
-
-CLIENT_ID = "YOUR_CLIENT_ID"
-
-
-
-CLIENT_SECRET = "YOUR_CLIENT_SECRET"
-
-
-
-ONEDRIVE_FILE = "/VLTD Tagging data.xlsx"
-
-
-
-
-
-def upload_to_onedrive(local_file):
-
-
-
-
-
-
-
-# ================= SECRETS =================
-
-
-
-TENANT_ID = st.secrets["b72f33b9-b661-435e-a734-9aa9d261dc3aD"]
-
-
-
-CLIENT_ID = st.secrets["747e7a9b-6ec3-4e01-b757-155943ad144c"]
-
-
-
-CLIENT_SECRET = st.secrets["d152c348-876f-41f2-ac11-20066e494e76"]
-
-
-
-ONEDRIVE_FILE = st.secrets[""D:\OneDrive - 太思科技股份有限公司\Desktop\rajan\python\VLTD\VLTD Tagging data.xlsx""]
-
-
-
-
-
-# ================= UPLOAD =================
-
-
-
-def upload_to_onedrive(local_file):
-
-
-
-    try:
-
-
-
-        credentials = ClientCredential(
-
-            CLIENT_ID,
-
-            CLIENT_SECRET
-
+        df = pd.DataFrame(
+            columns=COLUMNS
         )
 
-
-
-        client = GraphClient(
-
-            TENANT_ID,
-
-            credentials
-
+        df.to_excel(
+            FILE,
+            index=False
         )
 
+    for c in COLUMNS:
 
+        if c not in df.columns:
 
-        with open(local_file, "rb") as f:
+            df[c] = ""
 
-            content = f.read()
-
-
-
-        (
-
-            client
-
-            .me
-
-            .drive
-
-            .root
-
-            .get_by_path(
-
-                ONEDRIVE_FILE
-
-            )
-
-            .upload(
-
-                content
-
-            )
-
-            .execute_query()
-
-        )
+    return df.fillna("")
 
 
 
-        return True
+def save_data(df):
+
+    df.to_excel(
+        FILE,
+        index=False,
+        engine="openpyxl"
+    )
 
 
 
-
-
-    except Exception as e:
-
-
-
-        st.error(
-
-            f"Upload failed: {e}"
-
-        )
-
-
-
-        return False
-
-        )# ================= UI =================
-
-
-
-st.set_page_config(page_title="VLTD Tagging", layout="wide")
-
-
-
-st.title("VLTD Tagging System")
-
-
-
-data = load_data()
-
-
-
-menu = st.sidebar.selectbox(
-
-    "Menu",
-
-    [
-
-        "Dashboard",
-
-        "Add Request",
-
-        "Bulk Upload",
-
-        "Vahan Status",
-
-        "Backend Status",
-
-        "Download Data"
-
-    ]
-
+st.set_page_config(
+page_title="VLTD",
+layout="wide"
 )
 
 
+df = load_data()
 
 
+page = st.sidebar.radio(
 
-# ================= DASHBOARD =================
+"Menu",
 
+[
 
+"Dashboard",
 
-if menu == "Dashboard":
+"Add Request",
 
+"Vahan Status",
 
+"State Backend Status"
 
-    st.subheader("📊 Status Dashboard")
+]
 
+)
 
+# ==================================
+# DASHBOARD
+# ==================================
 
-    df = pd.DataFrame(data)
+if page == "Dashboard":
 
+    st.title("📊 VLTD Dashboard")
 
+    temp = df.copy()
 
-    if df.empty:
+    if len(temp):
 
-        st.warning("No data available")
-
-        st.stop()
-
-
-
-    # ---------------- DATE FILTER ----------------
-
-
-
-    df["request_date"] = pd.to_datetime(
-
-        df["request_date"],
-
-        errors="coerce"
-
-    )
-
-
-
-    col1, col2 = st.columns(2)
-
-
-
-    with col1:
-
-        start_date = st.date_input(
-
-            "Start Date",
-
-            value=df["request_date"].min().date()
-
+        temp["Request Date"] = pd.to_datetime(
+            temp["Request Date"],
+            errors="coerce"
         )
 
+        cdate1, cdate2 = st.columns(2)
 
+        with cdate1:
 
-    with col2:
+            from_date = st.date_input(
+                "From Date"
+            )
 
-        end_date = st.date_input(
+        with cdate2:
 
-            "End Date",
+            to_date = st.date_input(
+                "To Date"
+            )
 
-            value=df["request_date"].max().date()
-
-        )
-
-
-
-    filtered_df = df[
-
-
-
-        (df["request_date"].dt.date >= start_date)
-
-
-
-        &
-
-
-
-        (df["request_date"].dt.date <= end_date)
-
-
-
-    ]
-
-
-
-    # ---------------- KPI ----------------
-
-
-
-    total_requests = len(
-
-        filtered_df
-
-    )
-
-
-
-    total_vahan_done = len(
-
-
-
-        filtered_df[
-
-            filtered_df[
-
-                "vahan_status"
-
-            ] == "Done"
-
+        temp = temp[
+            (
+                temp[
+                    "Request Date"
+                ]
+                .dt.date
+                >= from_date
+            )
+            &
+            (
+                temp[
+                    "Request Date"
+                ]
+                .dt.date
+                <= to_date
+            )
         ]
-
-
-
-    )
-
-
-
-    total_backend_done = len(
-
-
-
-        filtered_df[
-
-            filtered_df[
-
-                "tagging_status"
-
-            ] == "Completed"
-
-        ]
-
-
-
-    )
-
 
 
     c1, c2, c3 = st.columns(3)
 
-
-
     c1.metric(
-
-        "Total Requests",
-
-        total_requests
-
+        "Total Request",
+        len(temp)
     )
-
-
 
     c2.metric(
-
         "Total Vahan Tagging",
-
-        total_vahan_done
-
+        (
+            temp[
+                "Vahan Status"
+            ]
+            ==
+            "Complete"
+        ).sum()
     )
-
-
 
     c3.metric(
-
         "Total State Backend Tagging",
-
-        total_backend_done
-
+        (
+            temp[
+                "State Backend Status"
+            ]
+            ==
+            "Completed"
+        ).sum()
     )
 
 
-
-    # ---------------- BAR CHART ----------------
-
+    st.divider()
 
 
     st.subheader(
-
-        "📈 Summary Chart"
-
+        "State Wise Tagging"
     )
 
+    if len(temp):
 
+        chart = (
 
-    chart_data = pd.DataFrame({
+            temp.groupby(
+                "State"
+            )
 
+            .agg(
 
+            {
 
-        "Category": [
+            "Vahan Status":
 
+            lambda x:
+            (
+                x=="Complete"
+            ).sum(),
 
+            "State Backend Status":
 
-            "Total Requests",
+            lambda x:
+            (
+                x=="Completed"
+            ).sum()
 
+            }
 
+            )
 
-            "Vahan Tagged",
-
-
-
-            "Backend Tagged"
-
-
-
-        ],
-
-
-
-        "Count": [
-
-
-
-            total_requests,
-
-
-
-            total_vahan_done,
-
-
-
-            total_backend_done
-
-
-
-        ]
-
-
-
-    })
-
-
-
-    st.bar_chart(
-
-
-
-        chart_data.set_index(
-
-            "Category"
+            .reset_index()
 
         )
 
+        fig = px.bar(
 
+            chart,
 
-    )
+            x="State",
 
+            y=[
 
+            "Vahan Status",
 
-  
+            "State Backend Status"
 
-    # ---------------- STATE SUMMARY ----------------
+            ],
 
+            barmode="group"
+
+        )
+
+        st.plotly_chart(
+            fig,
+            use_container_width=True
+        )
 
 
     st.subheader(
-
-        "📍 State Wise Requests"
-
+        "Tagged By"
     )
 
+    if len(temp):
 
+        tag = (
 
-    state_df = (
+            temp
 
+            .groupby(
+                "Vahan Tagged By"
+            )
 
+            .size()
 
-        filtered_df
-
-
-
-        .groupby(
-
-            "state"
+            .reset_index(
+                name="Count"
+            )
 
         )
 
+        fig2 = px.bar(
 
+            tag,
 
-        .size()
+            x="Vahan Tagged By",
 
-
-
-        .reset_index(
-
-            name="Total"
+            y="Count"
 
         )
 
-
-
-    )
-
-
-
-    st.bar_chart(
-
-
-
-        state_df.set_index(
-
-            "state"
-
+        st.plotly_chart(
+            fig2,
+            use_container_width=True
         )
-
-
-
-    )
-
-
-
-    # ---------------- TAGGED BY ----------------
-
 
 
     st.subheader(
-
-        "👤 Tagged By Summary"
-
+        "All Requests"
     )
-
-
-
-    tagged = (
-
-
-
-        filtered_df[
-
-            "vahan_tagged_by"
-
-        ]
-
-
-
-        .fillna(
-
-            "Not Assigned"
-
-        )
-
-
-
-        .value_counts()
-
-
-
-    )
-
-
-
-    st.bar_chart(
-
-        tagged
-
-    )
-
-
-
-    # ---------------- DATA TABLE ----------------
-
-
-
-    st.subheader(
-
-        "📋 Filtered Records"
-
-    )
-
-
 
     st.dataframe(
-
-        filtered_df,
-
+        temp,
         use_container_width=True
-
     )
 
 
-
-    # ---------------- DOWNLOAD FILTERED ----------------
-
-
-
-    csv = filtered_df.to_csv(
-
-        index=False
-
-    )
-
-
-
-    st.download_button(
-
-
-
-        "⬇ Download Filtered Data",
-
-
-
-        csv,
-
-
-
-        file_name="Dashboard_Filtered_Data.csv",
-
-
-
-        mime="text/csv"
-
-
-
-    )
-
-
-
-# ================= ADD REQUEST =================
-
-
-
-elif menu == "Add Request":
-
-
-
-    vin = st.text_input("VIN")
-
-    state = st.text_input("State")
-
-    dealer = st.text_input("Dealer Code")
-
-
-
-    if st.button("Add"):
-
-
-
-        data.append({
-
-            "id": len(data) + 1,
-
-            "vin": vin,
-
-            "state": state,
-
-            "dealer_code": dealer,
-
-            "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
-
-            "vahan_status": "Pending",
-
-            "vahan_tagged_by": None,
-
-            "forwarded_to_lumax": False,
-
-            "forwarded_time": None,
-
-            "remarks": "",
-
-            "tagging_status": None,
-
-            "backend_tagged_by": None,
-
-            "closure_date": None
-
-        })
-
-
-
-        save_data(data)
-
-        st.success("Request Added")
-
-
-
-
-
-# ================= BULK UPLOAD =================
-
-
-
-elif menu == "Bulk Upload":
-
-
-
-    file = st.file_uploader("Upload Excel/CSV", type=["xlsx", "csv"])
-
-
-
-    if file:
-
-
-
-        if file.name.endswith(".csv"):
-
-            df = pd.read_csv(file)
-
-        else:
-
-            df = pd.read_excel(file)
-
-
-
-        st.dataframe(df)
-
-
-
-        if st.button("Confirm Upload"):
-
-
-
-            for _, row in df.iterrows():
-
-
-
-                data.append({
-
-                    "id": len(data) + 1,
-
-                    "vin": row["VIN"],
-
-                    "state": row["State"],
-
-                    "dealer_code": row["Dealer Code"],
-
-                    "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
-
-                    "vahan_status": "Pending",
-
-                    "vahan_tagged_by": None,
-
-                    "forwarded_to_lumax": False,
-
-                    "forwarded_time": None,
-
-                    "remarks": "",
-
-                    "tagging_status": None,
-
-                    "backend_tagged_by": None,
-
-                    "closure_date": None
-
-                })
-
-
-
-            save_data(data)
-
-            st.success("Bulk Upload Completed")
-
-
-
-
-
-# ================= VAHAN STATUS =================
-
-
-
-elif menu == "Vahan Status":
-
-
-
-    st.subheader("Vahan Status")
-
-
-
-    pending = [r for r in data if not r.get("forwarded_to_lumax")]
-
-
-
-    st.dataframe(pd.DataFrame(pending))
-
-
-
-    req = st.number_input("Request ID", min_value=1)
-
-
-
-    status = st.selectbox("Vahan Status", ["Pending", "Done"])
-
-
-
-    remarks = st.text_input("Remarks")
-
-
-
-    tagged_by = st.selectbox(
-
-        "Vahan Tagged By",
-
-        ["Rajan", "Vishal", "Lumax Team"]
-
-    )
-
-
-
-    if st.button("Update Vahan"):
-
-
-
-        for r in data:
-
-            if r["id"] == req:
-
-                r["vahan_status"] = status
-
-                r["remarks"] = remarks
-
-                r["vahan_tagged_by"] = tagged_by
-
-
-
-        save_data(data)
-
-        st.success("Vahan Updated")
-
-
-
-    if st.button("Forward To Lumax"):
-
-
-
-        ok = False
-
-
-
-        for r in data:
-
-            if r["id"] == req and r["vahan_status"] == "Done":
-
-                r["forwarded_to_lumax"] = True
-
-                r["forwarded_time"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-
-                ok = True
-
-
-
-        save_data(data)
-
-
-
-        if ok:
-
-            st.success("Forwarded to Lumax")
-
-        else:
-
-            st.error("Set status to Done first")
-
-
-
-
-
-# ================= BACKEND =================
-
-
-
-elif menu == "Backend Status":
-
-
-
-    st.subheader("Backend Status")
-
-
-
-    backend = [r for r in data if r.get("forwarded_to_lumax")]
-
-
-
-    st.dataframe(pd.DataFrame(backend))
-
-
-
-    req = st.number_input("Request ID", min_value=1)
-
-
-
-    status = st.selectbox("Tagging Status", ["Pending", "Completed"])
-
-
-
-    remarks = st.text_input("Remarks")
-
-
-
-    tagged_by = st.selectbox(
-
-        "Backend Tagged By",
-
-        ["Rajan", "Vishal", "Lumax Team"]
-
-    )
-
-
-
-    if st.button("Save Backend"):
-
-
-
-        for r in data:
-
-            if r["id"] == req:
-
-
-
-                r["tagging_status"] = status
-
-                r["remarks"] = remarks
-
-                r["backend_tagged_by"] = tagged_by
-
-
-
-                if status == "Completed":
-
-                    r["closure_date"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-
-
-
-        save_data(data)
-
-        st.success("Backend Updated")
-
-# ================= EDIT REQUEST =================
-
-
-
-elif menu == "Edit Request":
-
-
-
-    st.subheader("✏ Edit Request")
-
-
-
-    if not data:
-
-        st.warning("No records available")
-
-        st.stop()
-
-
-
-    ids = [r["id"] for r in data]
-
-
-
-    selected = st.selectbox(
-
-        "Select Request ID",
-
-        ids
-
-    )
-
-
-
-    record = next(
-
-        x for x in data
-
-        if x["id"] == selected
-
-    )
-
-
-
-    vin = st.text_input(
-
-        "VIN",
-
-        record["vin"]
-
-    )
-
-
-
-    state = st.text_input(
-
-        "State",
-
-        record["state"]
-
-    )
-
-
-
-    dealer = st.text_input(
-
-        "Dealer Code",
-
-        record["dealer_code"]
-
-    )
-
-
-
-    remarks = st.text_input(
-
-        "Remarks",
-
-        record.get("remarks", "")
-
-    )
-
-
-
-    if st.button("Update Record"):
-
-
-
-        record["vin"] = vin
-
-        record["state"] = state
-
-        record["dealer_code"] = dealer
-
-        record["remarks"] = remarks
-
-
-
-        save_data(data)
-
-
-
-        st.success("Record Updated Successfully")
-
-
-
-# ================= DOWNLOAD =================
-
-
-
-elif menu == "Download Data":
-
-
-
-    save_data(data)
-
-
-
-    with open(EXCEL_FILE, "rb") as f:
+    if os.path.exists(FILE):
 
         st.download_button(
 
             "⬇ Download Excel",
 
-            f,
+            open(
+                FILE,
+                "rb"
+            ),
 
-            file_name="VLTD Tagging data.xlsx",
+            "VLTD_Tagging_Data.xlsx"
 
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+# ==================================
+# ADD REQUEST
+# ==================================
+
+elif page == "Add Request":
+
+    st.title("➕ Add Request")
+
+    vin = st.text_input(
+        "Enter VIN"
+    )
+
+    state = st.selectbox(
+        "Select State / UT",
+        ALL_STATES
+    )
+
+    dealer = st.text_input(
+        "Enter Dealer Code"
+    )
+
+    c1, c2 = st.columns(2)
+
+    with c1:
+
+        if st.button(
+            "Submit"
+        ):
+
+            vin = vin.strip()
+            dealer = dealer.strip()
+
+            if not vin:
+
+                st.error(
+                    "VIN required"
+                )
+
+            else:
+
+                duplicate = (
+
+                    df[
+                        "VIN"
+                    ]
+                    .astype(str)
+
+                    .str.upper()
+
+                    ==
+                    vin.upper()
+
+                ).any()
+
+                if duplicate:
+
+                    st.warning(
+                        "VIN already exists"
+                    )
+
+                else:
+
+                    row = {
+
+                    "Request Date":
+                    str(
+                    datetime.now()
+                    ),
+
+                    "VIN":
+                    vin,
+
+                    "State":
+                    state,
+
+                    "Dealer Code":
+                    dealer,
+
+                    "Vahan Status":
+                    "Pending",
+
+                    "Vahan Tagged By":
+                    "",
+
+                    "Vahan Remarks":
+                    "",
+
+                    "Vahan Update Time":
+                    "",
+
+                    "Forward To Lumax":
+                    "No",
+
+                    "Lumax Forward Time":
+                    "",
+
+                    "State Backend Status":
+                    "Pending",
+
+                    "State Tagged By":
+                    "",
+
+                    "State Remarks":
+                    "",
+
+                    "State Update Time":
+                    ""
+
+                    }
+
+                    df = pd.concat(
+
+                        [
+
+                        df,
+
+                        pd.DataFrame(
+                            [row]
+                        )
+
+                        ],
+
+                        ignore_index=True
+
+                    )
+
+                    save_data(
+                        df
+                    )
+
+                    st.success(
+                        "Request Added"
+                    )
+
+
+    with c2:
+
+        if st.button(
+            "Clear"
+        ):
+
+            st.rerun()
+
+
+    st.divider()
+
+    st.subheader(
+        "Recent Requests"
+    )
+
+    show = df[
+
+        [
+
+        "Request Date",
+
+        "VIN",
+
+        "State",
+
+        "Dealer Code",
+
+        "Vahan Status"
+
+        ]
+
+    ]
+
+    st.dataframe(
+
+        show.tail(20),
+
+        use_container_width=True
+
+    )
+
+# ==================================
+# VAHAN STATUS
+# ==================================
+
+# ==================================
+# VAHAN STATUS
+# ==================================
+
+elif page == "Vahan Status":
+
+    st.title("🚗 Vahan Status")
+
+    pending = df[
+
+        df[
+            "Forward To Lumax"
+        ]
+
+        .astype(str)
+
+        .str.strip()
+
+        !=
+
+        "Yes"
+
+    ].copy()
+
+
+    st.subheader(
+        "Vahan Requests"
+    )
+
+
+    if len(pending) == 0:
+
+        st.info(
+            "No records available"
+        )
+
+    else:
+
+        pending = pending.reset_index()
+
+        pending["Select"] = False
+
+
+        selected = st.data_editor(
+
+            pending[
+
+                [
+
+                "Select",
+
+                "Request Date",
+
+                "VIN",
+
+                "State",
+
+                "Dealer Code",
+
+                "Vahan Status",
+
+                "Vahan Tagged By"
+
+                ]
+
+            ],
+
+            hide_index=True,
+
+            use_container_width=True
 
         )
 
 
+        selected_rows = (
 
-    st.success(f"Saved at: {EXCEL_FILE}")
+            selected[
+
+                selected[
+                    "Select"
+                ]
+
+            ]
+
+            .index
+
+            .tolist()
+
+        )
 
 
+        selected_vin = (
+
+            pending
+
+            .loc[
+                selected_rows,
+                "VIN"
+            ]
+
+            .tolist()
+
+        )
 
 
+        st.write(
+            "Selected VIN:",
+            len(
+                selected_vin
+            )
+        )
 
-now 
+
+        status = st.selectbox(
+
+            "Vahan Status",
+
+            [
+
+            "Pending",
+
+            "Complete"
+
+            ]
+
+        )
+
+
+        tag = st.selectbox(
+
+            "Tagged By",
+
+            [
+
+            "Rahan",
+
+            "Vishal",
+
+            "Lumax Team"
+
+            ]
+
+        )
+
+
+        remarks = ""
+
+
+        if status == "Pending":
+
+            remarks = st.text_area(
+                "Remarks"
+            )
+
+
+        c1, c2 = st.columns(2)
+
+
+        with c1:
+
+            if st.button(
+                "Update Status"
+            ):
+
+                if not selected_vin:
+
+                    st.warning(
+                        "Select VIN"
+                    )
+
+                else:
+
+                    mask = (
+
+                        df[
+                            "VIN"
+                        ]
+
+                        .isin(
+                            selected_vin
+                        )
+
+                    )
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Status"
+                    ] = status
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Tagged By"
+                    ] = tag
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Remarks"
+                    ] = remarks
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Update Time"
+                    ] = str(
+                        datetime.now()
+                    )
+
+
+                    save_data(
+                        df
+                    )
+
+                    st.success(
+                        "Status Updated"
+                    )
+
+                    st.rerun()
+
+
+        with c2:
+
+            if st.button(
+                "Forward To Lumax"
+            ):
+
+                if not selected_vin:
+
+                    st.warning(
+                        "Select VIN"
+                    )
+
+                else:
+
+                    mask = (
+
+                        df[
+                            "VIN"
+                        ]
+
+                        .isin(
+                            selected_vin
+                        )
+
+                    )
+
+
+                    df.loc[
+                        mask,
+                        "Forward To Lumax"
+                    ] = "Yes"
+
+
+                    df.loc[
+                        mask,
+                        "Lumax Forward Time"
+                    ] = str(
+                        datetime.now()
+                    )
+
+
+                    df.loc[
+                        mask,
+                        "Vahan Status"
+                    ] = "Complete"
+
+
+                    save_data(
+                        df
+                    )
+
+                    st.success(
+                        "Forwarded To Lumax"
+                    )
+
+                    st.rerun()
+
+
+        st.divider()
+
+
+        st.subheader(
+            "Current Vahan List"
+        )
+
+
+        st.dataframe(
+
+            pending[
+
+                [
+
+                "Request Date",
+
+                "VIN",
+
+                "State",
+
+                "Dealer Code",
+
+                "Vahan Status",
+
+                "Vahan Tagged By",
+
+                "Vahan Remarks"
+
+                ]
+
+            ],
+
+            use_container_width=True
+
+        )
+        # ==================================
+# STATE BACKEND STATUS
+# ==================================
+
+elif page == "State Backend Status":
+
+    st.title("🏢 State Backend Status")
+
+    pending = df[
+
+        (
+            df[
+                "Forward To Lumax"
+            ]
+            .astype(str)
+            .str.strip()
+            ==
+            "Yes"
+        )
+
+        &
+
+        (
+            df[
+                "State Backend Status"
+            ]
+            .astype(str)
+            .str.strip()
+            ==
+            "Pending"
+        )
+
+    ].copy()
+
+
+    st.subheader(
+        "Pending State Backend Requests"
+    )
+
+
+    if len(pending) == 0:
+
+        st.info(
+            "No pending VIN"
+        )
+
+
+    else:
+
+        pending = pending.reset_index()
+
+        pending["Select"] = False
+
+
+        selected_table = st.data_editor(
+
+            pending[
+
+                [
+
+                "Select",
+
+                "Request Date",
+
+                "VIN",
+
+                "State",
+
+                "Dealer Code",
+
+                "Vahan Tagged By",
+
+                "Forward To Lumax"
+
+                ]
+
+            ],
+
+            hide_index=True,
+
+            use_container_width=True
+
+        )
+
+
+        selected_rows = (
+
+            selected_table[
+                selected_table[
+                    "Select"
+                ]
+            ]
+
+            .index
+
+            .tolist()
+
+        )
+
+
+        selected_vin = (
+
+            pending
+
+            .loc[
+                selected_rows,
+                "VIN"
+            ]
+
+            .tolist()
+
+        )
+
+
+        st.write(
+            "Selected:",
+            len(
+                selected_vin
+            )
+        )
+
+
+        tag = st.selectbox(
+
+            "Tagged By",
+
+            [
+
+            "Rahan",
+
+            "Vishal",
+
+            "Lumax Team"
+
+            ]
+
+        )
+
+
+        status = st.selectbox(
+
+            "State Status",
+
+            [
+
+            "Pending",
+
+            "Completed"
+
+            ]
+
+        )
+
+
+        remarks = ""
+
+        if status == "Pending":
+
+            remarks = st.text_area(
+                "Remarks"
+            )
+
+
+        if st.button(
+            "Update State Status"
+        ):
+
+            if not selected_vin:
+
+                st.warning(
+                    "Select VIN"
+                )
+
+            else:
+
+                mask = (
+
+                    df[
+                        "VIN"
+                    ]
+
+                    .isin(
+                        selected_vin
+                    )
+
+                )
+
+
+                df.loc[
+                    mask,
+                    "State Backend Status"
+                ] = status
+
+
+                df.loc[
+                    mask,
+                    "State Tagged By"
+                ] = str(
+                    tag
+                )
+
+
+                df.loc[
+                    mask,
+                    "State Remarks"
+                ] = remarks
+
+
+                df.loc[
+                    mask,
+                    "State Update Time"
+                ] = str(
+                    datetime.now()
+                )
+
+
+                save_data(
+                    df
+                )
+
+                st.success(
+                    "Updated"
+                )
+
+                st.rerun()
+
+
+        st.divider()
+
+
+        st.subheader(
+            "Pending List"
+        )
+
+
+        st.dataframe(
+
+            pending[
+
+                [
+
+                "Request Date",
+
+                "VIN",
+
+                "State",
+
+                "Dealer Code",
+
+                "Vahan Tagged By",
+
+                "State Backend Status"
+
+                ]
+
+            ],
+
+            use_container_width=True
+
+        )
