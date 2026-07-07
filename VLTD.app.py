@@ -127,7 +127,6 @@ page = st.sidebar.radio(
 
 ]
 
-)
 
 # ==================================
 # DASHBOARD
