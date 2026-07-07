@@ -1,131 +1,119 @@
+
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
 import plotly.express as px
-
-
-FILE = "VLTD_Tagging_Data.xlsx"
-
-
+import gspread
+from google.oauth2.service_account import Credentials
+ 
+ 
+# ==================================
+# GOOGLE SHEETS CONNECTION
+# ==================================
+ 
+SHEET_ID = st.secrets["SHEET_ID"]
+WORKSHEET_NAME = "Sheet1"  # change if your tab is named differently
+ 
 COLUMNS = [
-
-"Request Date",
-"VIN",
-"State",
-"Dealer Code",
-
-"Vahan Status",
-"Vahan Tagged By",
-"Vahan Remarks",
-"Vahan Update Time",
-
-"Forward To Lumax",
-"Lumax Forward Time",
-
-"State Backend Status",
-"State Tagged By",
-"State Remarks",
-"State Update Time"
-
+    "Request Date",
+    "VIN",
+    "State",
+    "Dealer Code",
+ 
+    "Vahan Status",
+    "Vahan Tagged By",
+    "Vahan Remarks",
+    "Vahan Update Time",
+ 
+    "Forward To Lumax",
+    "Lumax Forward Time",
+ 
+    "State Backend Status",
+    "State Tagged By",
+    "State Remarks",
+    "State Update Time"
 ]
-
-
+ 
 ALL_STATES = [
-
-"Andhra Pradesh",
-"Arunachal Pradesh",
-"Assam",
-"Bihar",
-"Chhattisgarh",
-"Delhi",
-"Goa",
-"Gujarat",
-"Haryana",
-"Himachal Pradesh",
-"Jharkhand",
-"Karnataka",
-"Kerala",
-"Madhya Pradesh",
-"Maharashtra",
-"Manipur",
-"Meghalaya",
-"Mizoram",
-"Nagaland",
-"Odisha",
-"Punjab",
-"Rajasthan",
-"Sikkim",
-"Tamil Nadu",
-"Telangana",
-"Tripura",
-"Uttar Pradesh",
-"Uttarakhand",
-"West Bengal",
-"Andaman and Nicobar",
-"Chandigarh",
-"Dadra and Nagar Haveli",
-"Daman and Diu",
-"Jammu and Kashmir",
-"Ladakh",
-"Lakshadweep",
-"Puducherry"
-
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
+    "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
+    "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
+    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan",
+    "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
+    "Uttarakhand", "West Bengal", "Andaman and Nicobar", "Chandigarh",
+    "Dadra and Nagar Haveli", "Daman and Diu", "Jammu and Kashmir",
+    "Ladakh", "Lakshadweep", "Puducherry"
 ]
-
-
-def load_data():
-
-    if os.path.exists(FILE):
-
-        df = pd.read_excel(
-            FILE,
-            dtype=str
-        )
-
-    else:
-
-        df = pd.DataFrame(
-            columns=COLUMNS
-        )
-
-        df.to_excel(
-            FILE,
-            index=False
-        )
-
-    for c in COLUMNS:
-
-        if c not in df.columns:
-
-            df[c] = ""
-
-    return df.fillna("")
-
-
-
-def save_data(df):
-
-    df.to_excel(
-        FILE,
-        index=False,
-        engine="openpyxl"
+ 
+ 
+@st.cache_resource
+def get_client():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes
     )
-
-
-
-st.set_page_config(
-page_title="VLTD",
-layout="wide"
-)
-
-
+    return gspread.authorize(creds)
+ 
+ 
+def get_worksheet():
+    client = get_client()
+    sh = client.open_by_key(SHEET_ID)
+    try:
+        ws = sh.worksheet(WORKSHEET_NAME)
+    except gspread.exceptions.WorksheetNotFound:
+        ws = sh.add_worksheet(title=WORKSHEET_NAME, rows=1000, cols=len(COLUMNS))
+        ws.append_row(COLUMNS)
+    return ws
+ 
+ 
+def load_data():
+    ws = get_worksheet()
+    records = ws.get_all_records()
+ 
+    if not records:
+        df = pd.DataFrame(columns=COLUMNS)
+    else:
+        df = pd.DataFrame(records)
+ 
+    for c in COLUMNS:
+        if c not in df.columns:
+            df[c] = ""
+ 
+    # keep everything as strings, same behaviour as the old dtype=str read
+    df = df.astype(str)
+    df = df.replace("nan", "")
+ 
+    return df[COLUMNS]
+ 
+ 
+def save_data(df):
+    """
+    Overwrites the whole sheet with the current DataFrame.
+    Simple and safe for small/medium datasets and low concurrent usage.
+    """
+    ws = get_worksheet()
+    ws.clear()
+    values = [COLUMNS] + df[COLUMNS].astype(str).values.tolist()
+    ws.update(values)
+ 
+ 
+# ==================================
+# APP
+# ==================================
+ 
+st.set_page_config(page_title="VLTD", layout="wide")
+ 
 df = load_data()
-
-
+ 
 page = st.sidebar.radio(
-
-"Menu",
+    "Menu",
+    ["Dashboard", "Add Request", "Vahan Status", "State Backend Status"]
+)
+ 
 
 [
 
