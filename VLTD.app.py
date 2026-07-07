@@ -12,7 +12,7 @@ from google.oauth2.service_account import Credentials
 # ==================================
  
 SHEET_ID = st.secrets["SHEET_ID"]
-WORKSHEET_NAME = "Sheet1"  # change if your tab is named differently
+WORKSHEET_NAME = "https://docs.google.com/spreadsheets/d/1BNu9Do5Hz6DIqyTsRPsPOieBMy8bbXz2_bG8r7z_VTI/edit?usp=sharing"  # change if your tab is named differently
  
 COLUMNS = [
     "Request Date",
