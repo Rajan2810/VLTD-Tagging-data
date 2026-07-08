@@ -552,66 +552,6 @@ def add():
     return redirect(url_for('index'))
 
 
-# ---------------- Bulk Upload ----------------
-@app.route("/bulk_upload", methods=["POST"])
-def bulk_upload():
-    file = request.files.get("file")
-    if not file or file.filename == "":
-        flash("No file selected.", "danger")
-        return redirect(url_for("index"))
-
-    tmp_filename = os.path.join(TMP_FOLDER, f"{uuid.uuid4().hex}_{file.filename}")
-    file.save(tmp_filename)
-
-    # Read into pandas for preview
-    if tmp_filename.endswith(".csv"):
-        df = pd.read_csv(tmp_filename)
-    else:
-        df = pd.read_excel(tmp_filename)
-
-    required_cols = ["VIN", "State", "Dealer Code"]
-    if not all(col in df.columns for col in required_cols):
-        flash(f"File must contain columns: {', '.join(required_cols)}", "danger")
-        os.remove(tmp_filename)
-        return redirect(url_for("index"))
-
-    preview_html = df.to_html(classes="table table-bordered table-sm table-striped", index=False)
-    return render_template("preview.html", table=preview_html, tmp_filename=tmp_filename)
-
-
-@app.route("/confirm_upload", methods=["POST"])
-def confirm_upload():
-    tmp_filename = request.form.get("tmp_filename")
-    if not tmp_filename or not os.path.exists(tmp_filename):
-        flash("Temporary file not found. Please upload again.", "danger")
-        return redirect(url_for("index"))
-
-    if tmp_filename.endswith(".csv"):
-        df = pd.read_csv(tmp_filename)
-    else:
-        df = pd.read_excel(tmp_filename)
-
-    requests = load_data()
-    for _, row in df.iterrows():
-        new_request = {
-            "id": len(requests) + 1,
-            "vin": row["VIN"],
-            "state": row["State"],
-            "dealer_code": row["Dealer Code"],
-            "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
-            "vahan_status": "Pending",
-            "forwarded_to_lumax": False,
-            "forwarded_time": None,
-            "tagging_status": None,
-            "closure_date": None,
-            "remarks": None
-        }
-        requests.append(new_request)
-
-    save_data(requests)
-    os.remove(tmp_filename)
-    flash("Bulk upload successful.", "success")
-    return redirect(url_for("index"))
 # ==================================
 # VAHAN STATUS
 # ==================================
