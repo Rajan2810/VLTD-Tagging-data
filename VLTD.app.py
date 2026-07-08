@@ -524,33 +524,10 @@ elif page == "Add Request":
         use_container_width=True
 
     )
-# ---------------- Page 1: Add Request ----------------
-@app.route('/')
-def index():
-    return render_template('add_request.html')
 
-
-@app.route('/add', methods=['POST'])
-def add():
-    requests = load_data()
-    new_request = {
-        "id": len(requests) + 1,
-        "vin": request.form['vin'],
-        "state": request.form['state'],
-        "dealer_code": request.form['dealer_code'],
-        "request_date": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"),
-        "vahan_status": "Pending",
-        "forwarded_to_lumax": False,
-        "forwarded_time": None,
-        "tagging_status": None,
-        "closure_date": None,
-        "remarks": None
-    }
-    requests.append(new_request)
-    save_data(requests)
-    flash("Request added successfully.", "success")
-    return redirect(url_for('index'))
-
+# ==================================
+# VAHAN STATUS
+# ==================================
 
 # ==================================
 # VAHAN STATUS
